@@ -86,18 +86,19 @@ class SimpleLinearRegression:
         plt.title('简单线性回归')
         plt.show()
 
-    def statistics_info(self,y_true,y_pred):
+    @staticmethod
+    def statistics_info(y_true,y_pred):
         r2 = r2_score(y_true, y_pred)
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
         mae = mean_absolute_error(y_true, y_pred)
         logger.info(f'\nR²（决定系数，R-squared）为：{r2:.3f} [表示模型能解释的因变量变异比例  范围：0 到 1（越大越好）]\n')
-        logger.info(f"\nRMSE: {rmse:.3f} 对均方误差开根， 均方根误差 ，单位与原始因变量一致\n")
-        logger.info(f"\nMAE: {mae:.3f} 平均绝对误差   相较于均方误差 对极端值不敏感 \n")
+        logger.info(f"\nRMSE: {rmse:.3f} [对均方误差开根， 均方根误差 ，单位与原始因变量一致]\n")
+        logger.info(f"\nMAE: {mae:.3f} [平均绝对误差   相较于均方误差 对极端值不敏感] \n")
         pass
 
 
 
-class SklearnLR():
+class SklearnLR(SimpleLinearRegression):
     pass
 
 
