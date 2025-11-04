@@ -1,0 +1,164 @@
+# =============================
+# Python 基础忽略项
+# =============================
+
+# Python 编译生成的文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+# pip 安装生成的目录
+*.egg-info/
+*.egg
+dist/
+build/
+
+# 虚拟环境（千万不要提交！）
+venv/
+ENV/
+env/
+.venv/
+envs/
+virtualenv/
+.vscode/  # 可选，如果你不想提交 VSCode 配置
+
+# =============================
+# Jupyter 相关
+# =============================
+
+# Jupyter Notebook 的检查点目录
+.ipynb_checkpoints/
+
+# =============================
+# 日志与缓存
+# =============================
+
+# 日志文件
+*.log
+
+# 缓存 / 临时文件
+*.cache
+*.tmp
+*.temp
+
+# =============================
+# 数据文件（通常很大，不应该提交到 Git）
+# =============================
+
+# 数据文件（尤其是大文件，比如 CSV、Excel、数据库文件等）
+*.csv
+*.xlsx
+*.xls
+*.json
+*.pkl
+*.pickle
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.nc
+*.db
+*.sqlite
+*.sqlite3
+data/
+raw_data/
+processed_data/
+output/
+results/
+downloads/
+
+# =============================
+# IDE / 编辑器相关（可选，根据你用的工具）
+# =============================
+
+# JetBrains 系列（PyCharm、IntelliJ 等）
+.idea/
+*.iml
+
+# VS Code（可选，如果你不想提交配置）
+.vscode/
+
+# Sublime Text
+*.sublime-workspace
+*.sublime-project
+
+# Emacs
+*.elc
+auto-save-list/
+
+# Vim
+*.swp
+*.swo
+
+# =============================
+# 操作系统和软件生成的文件
+# =============================
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =============================
+# 其它常见忽略项
+# =============================
+
+# 环境变量文件（包含敏感信息！）
+.env
+.venv
+*.env.local
+*.env.development.local
+*.env.test.local
+*.env.production.local
+
+# 本地覆盖配置（如 pytest、flake8 等的本地忽略）
+*.local
+
+# 测试覆盖率文件
+coverage.xml
+*.cover
+.htmlcov/
+
+# 某些测试或构建产物
+*.pytest_cache/
+*.tox/
+.nox/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# flake8
+.flake8
+
+# pre-commit
+.pre-commit-config.yaml
+.pre-commit/
+
+# =============================
+# 大文件 / 二进制文件 / 模型文件（ML 场景常见）
+# =============================
+
+# 模型文件（如 TensorFlow、PyTorch 模型）
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.h5
+*.pb
+
+# 深度学习相关缓存
+runs/
+logs/
+tfevents*
+
+# 大文件（建议用 Git LFS 管理，如图片、音频、视频、模型权重等）
+# *.zip
+# *.tar.gz
+# 如果有大文件，推荐使用 Git LFS，而不是直接忽略
+
+*.pyc
