@@ -37,39 +37,91 @@ class SimpleLinearRegression:
 
     def fit(self, x, y):
         """
-        拟合
-        使用最小二乘法拟合 y = slope * x + intercept
+        拟合线性回归模型（支持一元和多元）
+
+        参数:
+            x: array-like, shape (n_samples,) 或 (n_samples, n_features)
+            y: array-like, shape (n_samples,)
         """
-        self.train_x = x
-        self.train_y = y
-        x_mean = np.mean(x)
-        y_mean = np.mean(y)
+        # 转换为 NumPy 数组
+        x = np.asarray(x)
+        y = np.asarray(y)
 
-        # 计算斜率 (slope)
-        numerator = np.sum((x - x_mean) * (y - y_mean))
-        denominator = np.sum((x - x_mean) ** 2)
-        self.slope = numerator / denominator
+        # 保存原始训练数据
+        self.train_x = x.copy()
+        self.train_y = y.copy()
 
-        # 计算截距 (intercept)
-        self.intercept = y_mean - self.slope * x_mean
+        # 如果 x 是一维的（一元回归），reshape 为 (n_samples, 1)
+        if x.ndim == 1:
+            x = x.reshape(-1, 1)  # 变成列向量
+
+        # 获取样本数和特征数
+        n_samples, n_features = x.shape
+
+        # 添加截距项：在 X 前面加一列 1
+        X = np.hstack([np.ones((n_samples, 1)), x])  # shape: (n_samples, n_features + 1)
+
+        # 使用正规方程求解：beta = (X^T X)^{-1} X^T y
+        # 更稳定的做法是使用 np.linalg.lstsq（推荐）
+        try:
+            beta, residuals, rank, s = np.linalg.lstsq(X, y, rcond=None)
+        except np.linalg.LinAlgError:
+            raise ValueError("矩阵不可逆，可能存在多重共线性或特征数大于样本数")
+
+        # 分离截距和系数
+        self.intercept = beta[0]
+        self.slope = beta[1:]  # 对一元回归，这是标量；对多元，是数组
 
     def predict(self, x):
         """
-        预测
-        :param x: 自变量
-        :return: 预测值
+        预测（支持一元和多元）
         """
         if self.slope is None or self.intercept is None:
             raise ValueError("请先调用 fit 方法进行拟合")
-        if isinstance(x, list):
-            x = np.array(x).flatten()
+
+        x = np.asarray(x)
+
+        # 确保 slope 是一维数组
+        slope = np.atleast_1d(self.slope)  # 即使是 float 也会转成 array
+        n_features = slope.shape[0]
+
+        # 标准化输入 x 的形状
+        if x.ndim == 0:
+            x = x.reshape(1, -1)  # 标量 → (1, 1)
+        elif x.ndim == 1:
+            if x.shape[0] == n_features:
+                x = x.reshape(1, -1)  # 单样本 → (1, n_features)
+            else:
+                # 可能是一元回归且输入多个样本（如 [1,2,3]）
+                if n_features == 1:
+                    x = x.reshape(-1, 1)
+                else:
+                    raise ValueError(f"输入维度 {x.shape} 与特征数 {n_features} 不匹配")
+        # x.ndim == 2: 保持原样
+
+        if x.shape[1] != n_features:
+            raise ValueError(f"输入特征维度 {x.shape[1]} != 模型特征数 {n_features}")
+
+        # 统一预测：矩阵乘法 + 截距
+        pred = x @ slope + self.intercept
+
         self.log_info()
-        pred = self.slope * x + self.intercept
-        return pred
+        return pred.ravel()  # 如果是单样本，返回标量或一维数组
 
     def log_info(self):
-        logger.info(f"LR模型拟合的斜率（slope）: {self.slope:.2f}")
-        logger.info(f"LR模型拟合的截距（intercept）: {self.intercept:.2f}")
+        # 处理 slope：统一转为 NumPy 数组以便判断
+        slope = np.asarray(self.slope)
+
+        if slope.ndim == 0 or slope.size == 1:
+            # 一元回归：显示为标量
+            slope_str = f"{slope.item():.2f}"
+        else:
+            # 多元回归：显示为列表或数组格式，保留两位小数
+            slope_str = "[" + ", ".join(f"{s:.2f}" for s in slope) + "]"
+
+        logger.info(f"LR模型拟合的斜率（slope）: {slope_str}")
+        # todo 截距这里改一下
+        logger.info(f"LR模型拟合的截距（intercept）: {str(self.intercept)}")
 
     def draw_picture(self):
         """
