@@ -25,8 +25,8 @@ student_ds = DataSetModel(train_x= df[['Hours Studied']].values, train_y= df[['P
 student_ds_multi = DataSetModel(train_x= df[:-100].drop('Performance Index', axis=1).values, train_y= df[:-100][['Performance Index']].values, type='liner')
 print(1)
 
-# 简单一元线性回归类
-class SimpleLinearRegression:
+# 线性回归类
+class OriginLinearRegression:
     def __init__(self,train_x = None, train_y = None):
         self.slope = None
         self.intercept = None
@@ -117,7 +117,7 @@ class SimpleLinearRegression:
             slope_str = f"{slope.item():.2f}"
         else:
             # 多元回归：显示为列表或数组格式，保留两位小数
-            slope_str = "[" + ", ".join(f"{s:.2f}" for s in slope) + "]"
+            slope_str = "[" + ", ".join(f"{s:.2f}" for s in slope.flatten()) + "]"
 
         logger.info(f"LR模型拟合的斜率（slope）: {slope_str}")
         # todo 截距这里改一下
@@ -150,7 +150,7 @@ class SimpleLinearRegression:
 
 
 
-class SklearnLR(SimpleLinearRegression):
+class SklearnLR(OriginLinearRegression):
     pass
 
 
@@ -160,10 +160,12 @@ if __name__ == '__main__':
     student_dataset = DataSetModel().read_csv(file_path='../DataSet/Student_Performance.csv', pred_key='Performance Index',
                                   split_ratio=[0.1, 0.1],
                                   text_2_num_mapping={'Extracurricular Activities': {'Yes': 1, 'No': 0}})
-    lr = SimpleLinearRegression(train_x = student_ds.train_x, train_y= student_ds.train_y)
-    pred_value = lr.predict([item[0] for item in student_dataset.valid_x])
+    lr = OriginLinearRegression(train_x = student_dataset.train_x, train_y= student_dataset.train_y)
+    pred_value = lr.predict(student_dataset.valid_x)
+    pred_test_value = lr.predict(student_dataset.test_x)
     # lr.draw_picture()
     lr.statistics_info(student_dataset.valid_y,pred_value)
+    lr.statistics_info(student_dataset.test_y,pred_test_value)
     pass
     # #  自建随机数据集 random_ds   真实数据集 student_ds
     # x = student_ds.X
