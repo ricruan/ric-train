@@ -1,10 +1,8 @@
 import logging
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-from numpy import ndarray
-from sklearn.linear_model import LinearRegression
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
 from DataSet.DataSet import DataSetModel
@@ -128,15 +126,19 @@ class OriginLinearRegression:
         绘图 可视化展示
         :return:
         """
-        plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
-        plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
-        plt.scatter(self.train_x, self.train_y, color='blue', label='真实数据')
-        plt.plot(self.train_x, self.predict(self.train_x), color='red', label='手撕拟合直线')
-        plt.xlabel('X')
-        plt.ylabel('y')
-        plt.legend()
-        plt.title('简单线性回归')
-        plt.show()
+        if self.slope.size == 1:
+            plt.rcParams['font.sans-serif'] = ['SimHei']  # 用来正常显示中文标签
+            plt.rcParams['axes.unicode_minus'] = False  # 用来正常显示负号
+            plt.scatter(self.train_x, self.train_y, color='blue', label='真实数据')
+            plt.plot(self.train_x, self.predict(self.train_x), color='red', label='手撕拟合直线')
+            plt.xlabel('X')
+            plt.ylabel('y')
+            plt.legend()
+            plt.title('简单线性回归')
+            plt.show()
+        else:
+            # TODO 绘制多元线性回归图 (二元可绘制， 多于二元将无法绘制)
+            pass
 
     @staticmethod
     def statistics_info(y_true,y_pred):
@@ -163,7 +165,7 @@ if __name__ == '__main__':
     lr = OriginLinearRegression(train_x = student_dataset.train_x, train_y= student_dataset.train_y)
     pred_value = lr.predict(student_dataset.valid_x)
     pred_test_value = lr.predict(student_dataset.test_x)
-    # lr.draw_picture()
+    lr.draw_picture()
     lr.statistics_info(student_dataset.valid_y,pred_value)
     lr.statistics_info(student_dataset.test_y,pred_test_value)
     pass

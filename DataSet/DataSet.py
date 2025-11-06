@@ -39,9 +39,9 @@ class DataSetModel:
         :return:
         """
         np.random.seed(seed)
-        X = np.random.rand(x_samples, x_features) * x_power
-        return DataSetModel(train_x=X,
-                            train_y=slope * X.flatten() + 1.0 + np.random.randn(100) * 2,
+        x = np.random.rand(x_samples, x_features) * x_power
+        return DataSetModel(train_x=x,
+                            train_y=slope * x.flatten() + 1.0 + np.random.randn(100) * 2,
                             type='liner')
 
     def read_csv(self, file_path: str, pred_key: str, split_ratio=None, text_2_num_mapping: dict = None):
@@ -63,6 +63,8 @@ class DataSetModel:
         features = df.drop(pred_key, axis=1).values
 
         if split_ratio:
+            split_ratio.extend([0.1,0.1])
+            split_ratio = [i if i < 0.5 else 0.1 for i in split_ratio[:2]]
             self.train_y, test_val_df = train_test_split(labels, test_size=split_ratio[0] + split_ratio[1],
                                                          random_state=42)
             self.valid_y, self.test_y = train_test_split(test_val_df,
@@ -81,7 +83,8 @@ class DataSetModel:
 
 
 if __name__ == "__main__":
-    df1 = DataSetModel().read_csv(file_path='../DataSet/Student_Performance.csv', pred_key='Performance Index',
-                                  split_ratio=[0.1, 0.1],
-                                  text_2_num_mapping={'Extracurricular Activities': {'Yes': 1, 'No': 0}})
-    print(1)
+    test = [1, 2, 3, 4, 5]
+    # df1 = DataSetModel().read_csv(file_path='../DataSet/Student_Performance.csv', pred_key='Performance Index',
+    #                               split_ratio=[0.1, 0.1],
+    #                               text_2_num_mapping={'Extracurricular Activities': {'Yes': 1, 'No': 0}})
+    print(test[:2])
