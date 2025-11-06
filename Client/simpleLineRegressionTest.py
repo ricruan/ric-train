@@ -147,10 +147,8 @@ class OriginLinearRegression:
 
     @staticmethod
     def statistics_info(y_true,y_pred):
-        r2 = r2_score(y_true, y_pred)
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
         mae = mean_absolute_error(y_true, y_pred)
-        logger.info(f'\nR²（决定系数，R-squared）为：{r2:.3f} [表示模型能解释的因变量变异比例  范围：0 到 1（越大越好）]\n')
         logger.info(f"\nRMSE: {rmse:.3f} [均方根误差 ，单位与原始因变量一致]\n")
         logger.info(f"\nMAE: {mae:.3f} [平均绝对误差   相较于均方误差 对极端值不敏感] \n")
         pass
@@ -158,8 +156,9 @@ class OriginLinearRegression:
     def _fit_statsmodels(self):
         x_with_const = sm.add_constant(self.train_x)
         self.sm_model = sm.OLS(self.train_y,x_with_const).fit()
-        conf_int = self.sm_model.conf_int(alpha=0.05)
-        params = self.sm_model.params
+        # 解读 summary() 打印的内容
+        # https://yuanbao.tencent.com/bot/app/share/chat/0qQsg8TcWht5
+        logger.info(self.sm_model.summary())
         pass
 
 
