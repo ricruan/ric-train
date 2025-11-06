@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
+import statsmodels.api as sm
 
 from DataSet.DataSet import DataSetModel
 
@@ -33,7 +34,11 @@ class OriginLinearRegression:
         if self.train_x is not None and self.train_y is not None:
             self.fit(train_x,train_y)
 
-    def fit(self, x, y):
+    def fit(self,x,y):
+        self._fit(x,y)
+        self._fit_statsmodels()
+
+    def _fit(self, x, y):
         """
         拟合线性回归模型（支持一元和多元）
 
@@ -146,10 +151,16 @@ class OriginLinearRegression:
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
         mae = mean_absolute_error(y_true, y_pred)
         logger.info(f'\nR²（决定系数，R-squared）为：{r2:.3f} [表示模型能解释的因变量变异比例  范围：0 到 1（越大越好）]\n')
-        logger.info(f"\nRMSE: {rmse:.3f} [对均方误差开根， 均方根误差 ，单位与原始因变量一致]\n")
+        logger.info(f"\nRMSE: {rmse:.3f} [均方根误差 ，单位与原始因变量一致]\n")
         logger.info(f"\nMAE: {mae:.3f} [平均绝对误差   相较于均方误差 对极端值不敏感] \n")
         pass
 
+    def _fit_statsmodels(self):
+        x_with_const = sm.add_constant(self.train_x)
+        self.sm_model = sm.OLS(self.train_y,x_with_const).fit()
+        conf_int = self.sm_model.conf_int(alpha=0.05)
+        params = self.sm_model.params
+        pass
 
 
 class SklearnLR(OriginLinearRegression):
