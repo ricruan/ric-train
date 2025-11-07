@@ -190,6 +190,4 @@ if __name__ == '__main__':
     pred_value = lr.predict(student_dataset.valid_x)
     pred_test_value = lr.predict(student_dataset.test_x)
     lr.draw_picture()
-    lr.statistics_info(student_dataset.valid_y, pred_value)
-    lr.statistics_info(student_dataset.test_y, pred_test_value)
     pass
