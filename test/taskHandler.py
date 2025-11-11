@@ -6,10 +6,16 @@ import random
 from typing import Any, Optional
 
 
-class FileTaskProcessor:
+class MultiThreadTaskProcessor:
+    """
+    多线程任务处理
+    存在一个主线程池，支持指定数量的最大工作线程
+    主线程可以持续添加新的任务进入任务队列
+    当指定时间段内没有新的任务需要处理时，自动销毁主线程池
+    """
     def __init__(self, max_workers: int = 3, idle_timeout: float = 60.0):
         """
-        初始化文件任务处理器
+        初始化多线程任务处理器
 
         :param max_workers: 线程池最大工作线程数
         :param idle_timeout: 多久没有新任务（从 add_task 调用算起）就自动关闭线程池（秒）
@@ -113,8 +119,8 @@ class FileTaskProcessor:
 # ======================
 # 示例使用：模拟间歇性任务流
 # ======================
-def main():
-    processor = FileTaskProcessor(max_workers=3, idle_timeout=30.0)  # 30秒无新任务就关闭（演示方便）
+def demo():
+    processor = MultiThreadTaskProcessor(max_workers=3, idle_timeout=30.0)  # 30秒无新任务就关闭（演示方便）
 
     # 第一批任务
     for i in range(1, 40):
@@ -134,4 +140,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    demo()
