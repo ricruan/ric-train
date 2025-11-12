@@ -151,6 +151,18 @@ class OriginLinearRegression:
         logger.info(f"\nMAE: {mae:.3f} [平均绝对误差   相较于均方误差 对极端值不敏感] \n")
         pass
 
+
+    def get_cov_matrix(self):
+        """
+        获取模型的方差-协方差矩阵
+        """
+        cov_matrix = self.sm_model.cov_params()
+        logger.info(cov_matrix)
+        # 标准误  对角线就是各参数估计的标准误的平方
+        logger.info(self.sm_model.bse)
+        return cov_matrix
+
+
     def _fit_statsmodels(self):
         """
         打印统计推断评判信息
@@ -190,4 +202,5 @@ if __name__ == '__main__':
     pred_value = lr.predict(student_dataset.valid_x)
     pred_test_value = lr.predict(student_dataset.test_x)
     lr.draw_picture()
+    lr.get_cov_matrix()
     pass
