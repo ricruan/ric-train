@@ -10,7 +10,7 @@ class MultiThreadTaskProcessor:
     """
     多线程任务处理
     存在一个主线程池，支持指定数量的最大工作线程
-    主线程可以持续添加新的任务进入任务队列
+    主线程存续期间可以持续添加新的任务进入任务队列
     当指定时间段内没有新的任务需要处理时，自动销毁主线程池
     """
     def __init__(self, max_workers: int = 3, idle_timeout: float = 60.0):
@@ -37,9 +37,10 @@ class MultiThreadTaskProcessor:
     def add_task(self, task_data: Any):
         """外部调用：添加一个任务到队列"""
         self.task_queue.put(task_data)
-        self._last_task_submit_time = time.time()
-
+        
+        # 使用锁保护时间戳更新和线程池状态检查
         with self._lock:
+            self._last_task_submit_time = time.time()
             if self._executor is None or self._executor._shutdown:
                 self._start_executor()
 
@@ -96,17 +97,25 @@ class MultiThreadTaskProcessor:
 
     def _shutdown_executor(self):
         """安全关闭线程池"""
-        if self._executor and not self._executor._shutdown:
-            # 先停止消费者线程
-            self._shutdown_event.set()
-            if self._consumer_thread and self._consumer_thread.is_alive():
-                self._consumer_thread.join(timeout=2)
+        # 注意：这里不能加锁，因为可能被监控线程调用（监控线程已持有锁）
+        # 使用原子性操作和状态检查来确保线程安全
+        
+        # 快速检查是否已经关闭或正在关闭
+        if self._executor is None or self._executor._shutdown:
+            return
+            
+        # 设置关闭标志，防止其他线程继续提交任务
+        self._shutdown_event.set()
+        
+        # 停止消费者线程
+        if self._consumer_thread and self._consumer_thread.is_alive():
+            self._consumer_thread.join(timeout=2)
 
-            # 关闭线程池（等待现有任务完成）
-            self._executor.shutdown(wait=True)
-            self._executor = None
-            self._consumer_thread = None
-            print("[FileTaskProcessor] 🔴 线程池已关闭")
+        # 关闭线程池（等待现有任务完成）
+        self._executor.shutdown(wait=True)
+        self._executor = None
+        self._consumer_thread = None
+        print("[FileTaskProcessor] 🔴 线程池已关闭")
 
     def shutdown(self, wait: bool = True):
         """手动关闭所有资源（程序退出时调用）"""
@@ -128,11 +137,11 @@ def demo():
         time.sleep(0.5)
 
     print("\n[主线程] 💤 睡眠 35 秒，模拟长时间无新任务...\n")
-    time.sleep(35)  # 超过 idle_timeout，线程池应自动关闭
+    time.sleep(350)  # 超过 idle_timeout，线程池应自动关闭
 
-    print("\n[主线程] ➕ 新任务来了！应自动重启线程池\n")
-    processor.add_task({'id': 'new_batch_1'})
-    processor.add_task({'id': 'new_batch_2'})
+    # print("\n[主线程] ➕ 新任务来了！应自动重启线程池\n")
+    # processor.add_task({'id': 'new_batch_1'})
+    # processor.add_task({'id': 'new_batch_2'})
 
     time.sleep(10)
     processor.shutdown(wait=True)
