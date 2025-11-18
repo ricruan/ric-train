@@ -1,7 +1,9 @@
+import logging
 import os
 import dashscope
 
 
+logger = logging.getLogger(__name__)
 
 class AsrClient:
 
@@ -22,42 +24,48 @@ class AsrClient:
 
     def asr(self,
             audio_file_path: str,
-            messages: list):
+            content: str = '',
+            messages = None,
+            extract_response: bool = False):
+        """
+        Asr 语音识别
+        :param audio_file_path:  音频文件路径
+        :param content:  System prompt content
+        :param messages:  if messages, audio_file_path and content will be invalid
+        :param extract_response: is need parse response?
+        :return: maybe response instance or  str (audio text)
+        """
+        logger.info("正在发起ASR请求....")
         response = dashscope.MultiModalConversation.call(
-            # 新加坡和北京地域的API Key不同。获取API Key：https://help.aliyun.com/zh/model-studio/get-api-key
-            # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key = "sk-xxx",
             api_key=os.getenv("DASHSCOPE_API_KEY"),
             model="qwen3-asr-flash",
-            messages=messages,
+            messages= messages or self._ez_msg(audio_file_path, content),
             result_format="message",
             asr_options={
                 "language": "zh",
                 "enable_itn": True
             }
         )
+        if extract_response:
+            return self.get_content_from_response(response)
         return response
 
+    @staticmethod
+    def get_content_from_response(response):
+        try:
+            return '\n'.join(item['text'] for item in response.output.choices[0].message.content)
+        except Exception as e:
+            logger.error(f"从响应中获取内容失败：{e}")
+            return response
 
-# 以下为北京地域url，若使用新加坡地域的模型，需将url替换为：https://dashscope-intl.aliyuncs.com/api/v1
-dashscope.base_http_api_url = 'https://dashscope.aliyuncs.com/api/v1'
 
-# 请用您的本地音频的绝对路径替换 ABSOLUTE_PATH/welcome.mp3
-audio_file_path = "file://ABSOLUTE_PATH/welcome.mp3"
+if __name__ == '__main__':
+    file_path = r'C:\Users\11243\Desktop\test.m4a'
 
-messages = [
-    {"role": "system", "content": [{"text": ""}]},  # 配置定制化识别的 Context
-    {"role": "user", "content": [{"audio": audio_file_path}]}
-]
-response = dashscope.MultiModalConversation.call(
-    # 新加坡和北京地域的API Key不同。获取API Key：https://help.aliyun.com/zh/model-studio/get-api-key
-    # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key = "sk-xxx",
-    api_key=os.getenv("DASHSCOPE_API_KEY"),
-    model="qwen3-asr-flash",
-    messages=messages,
-    result_format="message",
-    asr_options={
-        # "language": "zh", # 可选，若已知音频的语种，可通过该参数指定待识别语种，以提升识别准确率
-        "enable_itn": True
-    }
-)
-print(response)
+    asr_client = AsrClient()
+    msg = [{"role": "system", "content": [{"text": ''}]},
+           {"role": "user", "content": [{"audio": file_path}]}]
+
+    res = asr_client.asr(audio_file_path=file_path,messages=msg)
+    print(res)
+

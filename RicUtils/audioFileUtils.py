@@ -14,7 +14,7 @@ class AudioFileHandler:
     def __init__(self):
         self.pending_files = []
         self.max_segment_duration = 1500
-        self.overlap_duration = 60
+        self.overlap_duration = self.max_segment_duration / 10
 
     def __del__(self):
         self._clear_pending_files()
@@ -47,8 +47,10 @@ class AudioFileHandler:
     def _split_audio_params_pre_handle(self, params):
         if not params.get('max_segment_duration'):
             params['max_segment_duration'] = self.max_segment_duration
+        else:
+            self.max_segment_duration = params.get('max_segment_duration')
         if not params.get('overlap_duration'):
-            params['overlap_duration'] = self.overlap_duration
+            params['overlap_duration'] = self.max_segment_duration / 10
         if not params.get('output_dir'):
             params['output_dir'] = tempfile.gettempdir()
         if not params.get('output_format'):
