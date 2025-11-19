@@ -1,3 +1,4 @@
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -6,6 +7,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from openai import OpenAI
 
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 client = OpenAI(
     # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx"
@@ -38,6 +40,7 @@ def ez_llm(sys_msg: str, usr_msg: str):
     :param usr_msg:
     :return:
     """
+    logger.info("正在发起LLM请求....")
     # noinspection PyTypeChecker
     completion = client.chat.completions.create(
         # 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
@@ -47,6 +50,7 @@ def ez_llm(sys_msg: str, usr_msg: str):
             {"role": "user", "content": usr_msg},
         ]
     )
+    logger.info(f"LLM请求完成 {completion.choices[0].message.content}")
     return completion.choices[0].message.content
 
 if __name__ == '__main__':
