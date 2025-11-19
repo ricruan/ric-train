@@ -154,7 +154,7 @@ class OriginLinearRegression:
 
     def get_cov_matrix(self):
         """
-        获取模型的方差-协方差矩阵
+        获取参数估计量的方差-协方差矩阵
         """
         cov_matrix = self.sm_model.cov_params()
         logger.info(cov_matrix)
@@ -194,7 +194,7 @@ class SklearnLR(OriginLinearRegression):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
-    student_dataset = DataSetModel().read_csv(file_path='../DataSet/Student_Performance.csv',
+    student_dataset = DataSetModel().read_csv(file_path='../DataSet/Student_Performance.csv' ,
                                               pred_key='Performance Index',
                                               split_ratio=[0.1, 0.1],
                                               text_2_num_mapping={'Extracurricular Activities': {'Yes': 1, 'No': 0}})
