@@ -22,6 +22,7 @@ if __name__ == "__main__":
 
     # 定义替换数据（支持 Jinja2 语法）
     context = {
+        "resume_info":{},
         "name":"沃林出品",
         "analysis_start":"""该求职者整体面试表现流畅、结构清晰，对技术细节（如数据治理、数仓分层、问题排查）有一定掌握，能结合项目举例说明，展现出较强的学习能力和表达能力。然而，其背景存在若干疑点，可能引发面试官对其“培训班出身”的怀疑：
 
@@ -84,7 +85,7 @@ if __name__ == "__main__":
   }
 ]
 }
-    # generate_doc_with_jinja(template_path, output_path, context)
+    generate_doc_with_jinja(template_path, output_path, context)
     res = json.loads("""[{"question": "能不能结合具体例子"
     ,"answer": "我在基金APP一用to_c"
     ,"analysis": "回答结构清晰，列举辑），体现了实际动手能力。\\n缺乏对问题动形止范"}]""")

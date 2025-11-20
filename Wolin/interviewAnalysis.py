@@ -9,9 +9,10 @@ from Client.asrClient import AsrClient
 from Client.qwen import ez_llm
 from RicUtils.audioFileUtils import AudioFileHandler
 from RicUtils.docUtils import generate_doc_with_jinja
+from RicUtils.pdfUtils import extract_pdf_text
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
     CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, test2, \
-    test
+    test, RESUME_JSON_EXTRACT_PROMPT, RESUME_ANALYSIS_PROMPT
 
 
 class InterviewAnalysis:
@@ -20,7 +21,7 @@ class InterviewAnalysis:
 
     def __init__(self):
         self.context_params = {
-            "name": "沃林出品"
+            "resume_info": {}
         }
         self.analysis_start_event = threading.Event()
         self.content = ''
@@ -132,6 +133,22 @@ class InterviewAnalysis:
         self._task()
         return text
 
+    def read_resume(self, file_path: str):
+        """
+        读取简历文件
+        :param file_path:
+        :return:
+        """
+        resume_content = extract_pdf_text(file_path)
+        resume_info = ez_llm(sys_msg=RESUME_JSON_EXTRACT_PROMPT,usr_msg=resume_content)
+        resume_info_json = json.loads(resume_info)
+        self.context_params['resume_info'] = resume_info_json
+        resume_analysis = ez_llm(sys_msg=RESUME_ANALYSIS_PROMPT,usr_msg=resume_content)
+        self.context_params['resume_analysis'] = resume_analysis
+        return resume_info_json
+
+
+
     def audio_2_text(self, file_path: str | list[str], max_workers: int = 25):
         """
         使用线程池并发运行 ASR 函数，并保持原始顺序
@@ -202,4 +219,5 @@ if __name__ == "__main__":
     input_file = r"C:\Users\11243\Desktop\邱俊豪东风日产.aac"
 
     ins = InterviewAnalysis()
-    ins.analysis(input_file)
+    # ins.analysis(input_file)
+    ins.read_resume(r"C:\Users\11243\Desktop\黄简历.pdf")

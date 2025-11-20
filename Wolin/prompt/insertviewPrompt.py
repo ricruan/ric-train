@@ -413,6 +413,60 @@ ANALYSIS_END_PROMPT = """
 {{analysis_start}}
 """
 
+
+RESUME_JSON_EXTRACT_PROMPT = """
+基于求职者简历，提取出指定信息，以JSON形式返回
+
+name: 求职者姓名
+age: 求职者年龄
+sex: 求职者性别
+education: 求职者教育背景
+graduation_time: 求职者毕业时间
+major: 求职者专业
+last_company: 求职者上一份工作公司
+last_position: 求职者上一份工作职位
+last_salary: 求职者上一份工作薪资
+last_start_time: 求职者上一份工作开始时间
+last_end_time: 求职者上一份工作结束时间
+last_duration: 求职者上一份工作工作时长
+intent_position: 求职者期望工作职位
+
+## 示例输出
+{
+  "name": "李明",
+  "age": 28,
+  "sex": "男",
+  "education": "清华大学-本科 清华大学-硕士研究生",
+  "graduation_time": "2020-06",
+  "major": "计算机科学与技术",
+  "last_company": "星辰科技有限公司",
+  "last_position": "高级后端开发工程师",
+  "last_salary": 25000,
+  "last_start_time": "2020-07",
+  "last_end_time": "2024-10",
+  "last_duration": "4年3个月",
+  "intent_position": "技术经理"
+}
+"""
+
+
+RESUME_ANALYSIS_PROMPT = """
+## 背景
+基于求职者简历，对求职者的简历进行评价，并给出改进建议
+
+## 规则
+- 禁止使用MarkDown格式, 禁止生成 **content** 形式的格式
+- 如果参考内容存在面试总结，请基于面试总结对简历提出修改建议
+- 判断是否存在工作量与项目周期不匹配的情况
+- 判断是否工作内容缺乏深度
+- 检查是否存在错别字以及无效赘述
+- 忽略时间上的问题，你感知到的时间并非实时
+
+
+## 参考内容
+{{analysis_start}}
+"""
+
 def render(prompt, params):
     template = Template(prompt)
     return template.render(params)

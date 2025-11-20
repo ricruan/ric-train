@@ -41,6 +41,8 @@ def ez_llm(sys_msg: str, usr_msg: str):
     :return:
     """
     logger.info("正在发起LLM请求....")
+    logger.info(f"sys_msg: {sys_msg[:100]}")
+    logger.info(f"usr_msg: {usr_msg[:100]}")
     # noinspection PyTypeChecker
     completion = client.chat.completions.create(
         # 模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
@@ -50,7 +52,7 @@ def ez_llm(sys_msg: str, usr_msg: str):
             {"role": "user", "content": usr_msg},
         ]
     )
-    logger.info(f"LLM请求完成 {completion.choices[0].message.content}")
+    logger.info(f"LLM请求完成\n {completion.choices[0].message.content}")
     return completion.choices[0].message.content
 
 if __name__ == '__main__':
