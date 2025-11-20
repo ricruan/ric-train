@@ -25,6 +25,7 @@ class InterviewAnalysis:
         }
         self.analysis_start_event = threading.Event()
         self.content = ''
+        self.resume_file = ''
         pass
 
     def _analysis_start(self):
@@ -85,6 +86,8 @@ class InterviewAnalysis:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         template_path = os.path.join(script_dir, "template.docx")
         output_path = os.path.join(script_dir, "output_docxtpl.docx")
+        print("================")
+        print(self.context_params)
         generate_doc_with_jinja(template_path, output_path, self.context_params)
 
     def _task(self):
@@ -101,10 +104,12 @@ class InterviewAnalysis:
         self.analysis_start_event.wait()
 
         # 依赖 analysis_start 的任务（可串行或再开线程）
+        task3_5 = threading.Thread(target=self.read_resume)
         task4 = threading.Thread(target=self._interview_evaluation)
         task5 = threading.Thread(target=self._self_evaluation)
         task6 = threading.Thread(target=self._analysis_end)
 
+        task3_5.start()
         task4.start()
         task5.start()
         task6.start()
@@ -113,6 +118,7 @@ class InterviewAnalysis:
         task1.join()
         task2.join()
         task3.join()
+        task3_5.join()
         task4.join()
         task5.join()
         task6.join()
@@ -124,7 +130,7 @@ class InterviewAnalysis:
 
         temp_file_list = self.file_handler.split_audio_with_overlap_ffmpeg(input_audio_path=file_path
                                                                            , max_segment_duration=100
-                                                                           ,output_format='wav')
+                                                                           , output_format='wav')
         asr_res = self.audio_2_text(temp_file_list)
         # print(asr_res)
         # asr_res = test
@@ -133,21 +139,21 @@ class InterviewAnalysis:
         self._task()
         return text
 
-    def read_resume(self, file_path: str):
+    def read_resume(self, file_path: str = None):
         """
         读取简历文件
         :param file_path:
         :return:
         """
+        if not file_path:
+            file_path = self.resume_file
         resume_content = extract_pdf_text(file_path)
-        resume_info = ez_llm(sys_msg=RESUME_JSON_EXTRACT_PROMPT,usr_msg=resume_content)
+        resume_info = ez_llm(sys_msg=RESUME_JSON_EXTRACT_PROMPT, usr_msg=resume_content)
         resume_info_json = json.loads(resume_info)
         self.context_params['resume_info'] = resume_info_json
-        resume_analysis = ez_llm(sys_msg=RESUME_ANALYSIS_PROMPT,usr_msg=resume_content)
+        resume_analysis = ez_llm(sys_msg=RESUME_ANALYSIS_PROMPT, usr_msg=resume_content)
         self.context_params['resume_analysis'] = resume_analysis
         return resume_info_json
-
-
 
     def audio_2_text(self, file_path: str | list[str], max_workers: int = 25):
         """
@@ -216,8 +222,11 @@ class InterviewAnalysis:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    input_file = r"C:\Users\11243\Desktop\邱俊豪东风日产.aac"
+    # input_file = r"C:\Users\11243\Desktop\邱俊豪东风日产.aac"
+    input_file = r'C:\Users\11243\Desktop\黄立强南方电网.m4a'
+    resume_file_path = r'C:\Users\11243\Desktop\黄简历.pdf'
 
     ins = InterviewAnalysis()
+    ins.resume_file = resume_file_path
     # ins.analysis(input_file)
     ins.read_resume(r"C:\Users\11243\Desktop\黄简历.pdf")
