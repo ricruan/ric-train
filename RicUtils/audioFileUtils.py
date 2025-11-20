@@ -20,6 +20,8 @@ class AudioFileHandler:
         self._clear_pending_files()
 
     def _clear_pending_files(self):
+        if not self.pending_files:
+            return
         cnt = 0
         for file in self.pending_files:
             try:
@@ -105,6 +107,33 @@ class AudioFileHandler:
             logger.info(f"❌ 切割失败：{e}")
             return None
 
+    @staticmethod
+    def sample_fmt(input_audio_path: str, output_filename: str = None, sample_rate: int = 16000, sample_fmt: str = "s16"):
+        """
+        将任意音频转换为16kHz、16-bit、单声道WAV文件
+        :param input_audio_path:
+        :param output_filename:
+        :param sample_rate: 设置采样率为16000Hz (16kHz)
+        :param sample_fmt:设置采样格式为16-bit signed integer PCM
+        :return:
+        """
+        try:
+            if not output_filename:
+                output_filename = os.path.join(os.path.dirname(input_audio_path), f"{os.path.basename(input_audio_path).split('.')[0]}_16k.wav")
+            subprocess.run([
+                AudioFileHandler._get_ffmpeg_run_path('ffmpeg'), '-i', input_audio_path,
+                '-ar', str(sample_rate),
+                '-ac', '1',
+                '-acodec', 'pcm_s16le',
+                '-y',  # 覆盖输出文件
+                output_filename
+            ], check=True)
+            logger.info(f"✅ 已保存：{output_filename}")
+            return output_filename
+        except subprocess.CalledProcessError as e:
+            logger.info(f"❌ 格式转换失败：{e}")
+            return None
+
     @params_handle_4c(_split_audio_params_pre_handle)
     @after_exec_4c(_append_to_pending_list)
     def split_audio_with_overlap_ffmpeg(
@@ -127,6 +156,9 @@ class AudioFileHandler:
         Return:
             list[str]: 切割后切块文件路径列表， 如果为空则代表未切割
         """
+        # 格式转换为16kHz、16-bit、单声道WAV文件
+        if output_format == "wav":
+            input_audio_path = self.sample_fmt(input_audio_path)
         # 获取音频时长
         duration_sec = AudioFileHandler.get_audio_duration(input_audio_path=input_audio_path)
         logger.info(f"音频总时长：{duration_sec:.2f} 秒")
@@ -208,6 +240,9 @@ if __name__ == "__main__":
     # print(duration1)
     # 调用函数切割音频
     handler = AudioFileHandler()
+    # 格式转换
+    # handler.sample_fmt(input_audio_path=input_file)
+
     paths = handler.split_audio_with_overlap_ffmpeg(
         input_audio_path=input_file,
     )
