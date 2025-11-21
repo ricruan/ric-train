@@ -7,9 +7,12 @@ from typing import List, Tuple, Any
 
 from Client.asrClient import AsrClient
 from Client.qwen import ez_llm
+from Client.redisClient import RedisClient
 from RicUtils.audioFileUtils import AudioFileHandler
+from RicUtils.decoratorUtils import after_exec_4c
 from RicUtils.docUtils import generate_doc_with_jinja
 from RicUtils.pdfUtils import extract_pdf_text
+from RicUtils.redisUtils import cache_with_params
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
     CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, test2, \
     test, RESUME_JSON_EXTRACT_PROMPT, RESUME_ANALYSIS_PROMPT
@@ -18,6 +21,7 @@ from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, 
 class InterviewAnalysis:
     asr_client = AsrClient()
     file_handler = AudioFileHandler()
+    redis_client = RedisClient()
 
     def __init__(self):
         self.context_params = {
@@ -126,19 +130,33 @@ class InterviewAnalysis:
         task7.start()
         task7.join()
 
-    def analysis(self, file_path: str):
-
+    @cache_with_params(key_template="InterviewAnalysis:split_audio:{file_path}", expire=3600)
+    def _split_audio_combine_2_text(self, file_path: str):
         temp_file_list = self.file_handler.split_audio_with_overlap_ffmpeg(input_audio_path=file_path
                                                                            , max_segment_duration=100
                                                                            , output_format='wav')
         asr_res = self.audio_2_text(temp_file_list)
-        # print(asr_res)
-        # asr_res = test
-        text = self.combine_slice_by_llm(asr_res)
+        text = self.combine_slice_by_llm(asr_res, self.context_params.get('resume_info'))
+        return text
+
+    def analysis(self, file_path: str):
+        """"
+        Interview Analysis Core Function
+        :param file_path: Audio File Path
+        :return:
+        """
+        self.read_resume(file_path=self.resume_file)
+        text = self._split_audio_combine_2_text(file_path=file_path)
         self.content = text
         self._task()
         return text
 
+    def read_resume_after(self, read_resume_result: tuple):
+        self.context_params['resume_info'] = read_resume_result[0]
+        self.context_params['resume_analysis'] = read_resume_result[1]
+
+    @after_exec_4c(read_resume_after)
+    @cache_with_params(key_template="InterviewAnalysis:resume_info:{file_path}", expire=3600)
     def read_resume(self, file_path: str = None):
         """
         读取简历文件
@@ -147,13 +165,12 @@ class InterviewAnalysis:
         """
         if not file_path:
             file_path = self.resume_file
+        # TODO 这里拆一下，简历分析 不要被缓存
         resume_content = extract_pdf_text(file_path)
         resume_info = ez_llm(sys_msg=RESUME_JSON_EXTRACT_PROMPT, usr_msg=resume_content)
         resume_info_json = json.loads(resume_info)
-        self.context_params['resume_info'] = resume_info_json
         resume_analysis = ez_llm(sys_msg=RESUME_ANALYSIS_PROMPT, usr_msg=resume_content)
-        self.context_params['resume_analysis'] = resume_analysis
-        return resume_info_json
+        return resume_info_json, resume_analysis
 
     def audio_2_text(self, file_path: str | list[str], max_workers: int = 25):
         """
@@ -216,8 +233,8 @@ class InterviewAnalysis:
         return ordered_results
 
     @staticmethod
-    def combine_slice_by_llm(slice_list: list[str] | str):
-        return ez_llm(sys_msg=COMBINE_SLICE, usr_msg=str(slice_list))
+    def combine_slice_by_llm(slice_list: list[str] | str, resume_info: dict):
+        return ez_llm(sys_msg=render(COMBINE_SLICE, {"resume_info": resume_info}), usr_msg=str(slice_list))
 
 
 if __name__ == "__main__":
@@ -229,4 +246,5 @@ if __name__ == "__main__":
     ins = InterviewAnalysis()
     ins.resume_file = resume_file_path
     # ins.analysis(input_file)
-    ins.read_resume(r"C:\Users\11243\Desktop\黄简历.pdf")
+    res = ins.read_resume(file_path=r"C:\Users\11243\Desktop\黄简历.pdf")
+    print(res)
