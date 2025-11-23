@@ -245,6 +245,6 @@ if __name__ == "__main__":
 
     ins = InterviewAnalysis()
     ins.resume_file = resume_file_path
-    # ins.analysis(input_file)
-    res = ins.read_resume(file_path=r"C:\Users\11243\Desktop\黄简历.pdf")
-    print(res)
+    ins.analysis(input_file)
+    # res = ins.read_resume(file_path=r"C:\Users\11243\Desktop\黄简历.pdf")
+    # print(res)

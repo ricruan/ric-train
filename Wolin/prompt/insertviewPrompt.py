@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from Client.qwen import ez_llm
@@ -454,7 +455,7 @@ intent_position: 求职者期望工作职位
 """
 
 
-RESUME_ANALYSIS_PROMPT = """
+RESUME_ANALYSIS_PROMPT = f"""
 ## 背景
 基于求职者简历，对求职者的简历进行评价，并给出改进建议
 
@@ -464,7 +465,7 @@ RESUME_ANALYSIS_PROMPT = """
 - 判断是否存在工作量与项目周期不匹配的情况
 - 判断是否工作内容缺乏深度
 - 检查是否存在错别字以及无效赘述
-- 忽略时间上的问题，你感知到的时间并非实时
+- 当前时间: {datetime.datetime.now()}
 
 
 ## 参考内容
