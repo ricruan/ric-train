@@ -35,6 +35,13 @@ def setup_logging():
     """
     配置日志系统，按天生成日志文件，日志级别从环境变量中获取
     """
+    # 创建根日志记录器
+    root_logger = logging.getLogger()
+    
+    # 检查是否已经配置过，避免重复添加处理器
+    if root_logger.handlers:
+        return
+    
     # 创建logs目录（如果不存在）
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
@@ -47,9 +54,6 @@ def setup_logging():
 
     # 从环境变量获取日志级别
     log_level = get_log_level_from_env()
-
-    # 创建根日志记录器
-    root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
 
     # 添加控制台处理器
