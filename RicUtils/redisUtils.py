@@ -1,8 +1,11 @@
 import json
+import logging
 import pickle
 import hashlib
 from typing import Any, Optional, Callable
 from functools import wraps
+
+logger = logging.getLogger(__name__)
 
 def get_default_client():
     """
@@ -60,10 +63,11 @@ def redis_cache(key_template: str,
                 cached_value = client.get(cache_key)
                 if cached_value is not None:
                     # 反序列化并返回缓存值
+                    logger.info(f'从Redis中获取值 by key: {cache_key}')
                     return _deserialize(cached_value, serializer)
             except Exception as e:
                 # 缓存读取失败，记录日志但继续执行原函数
-                print(f"Redis 缓存读取失败 {cache_key}: {e}")
+                logger.error(f"Redis 缓存读取失败 {cache_key}: {e}")
 
             # 缓存未命中，执行原函数
             result = func(*args, **kwargs)
@@ -72,9 +76,10 @@ def redis_cache(key_template: str,
                 # 序列化结果并存入 Redis
                 serialized_result = _serialize(result, serializer)
                 client.set(cache_key, serialized_result, ex=expire)
+                logger.info(f"Redis 缓存写入成功 {cache_key}")
             except Exception as e:
                 # 缓存写入失败，记录日志但不影响原函数返回
-                print(f"Redis 缓存写入失败 {cache_key}: {e}")
+                logger.error(f"Redis 缓存写入失败 {cache_key}: {e}")
 
             return result
 

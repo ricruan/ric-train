@@ -14,22 +14,24 @@ from RicUtils.docUtils import generate_doc_with_jinja
 from RicUtils.pdfUtils import extract_pdf_text
 from RicUtils.redisUtils import cache_with_params
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
-    CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, test2, \
-    test, RESUME_JSON_EXTRACT_PROMPT, RESUME_ANALYSIS_PROMPT
+    CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT,  \
+    RESUME_JSON_EXTRACT_PROMPT, RESUME_ANALYSIS_PROMPT
 
+logger = logging.getLogger(__name__)
 
 class InterviewAnalysis:
     asr_client = AsrClient()
     file_handler = AudioFileHandler()
     redis_client = RedisClient()
 
-    def __init__(self):
+    def __init__(self, audio_file: str, resume_file: str = ''):
         self.context_params = {
             "resume_info": {}
         }
         self.analysis_start_event = threading.Event()
         self.content = ''
-        self.resume_file = ''
+        self.resume_file = resume_file
+        self.audio_file = audio_file
         pass
 
     def _analysis_start(self):
@@ -99,21 +101,21 @@ class InterviewAnalysis:
         task1 = threading.Thread(target=self._analysis_start)
         task2 = threading.Thread(target=self._basic_report_json)
         task3 = threading.Thread(target=self._qa_analysis)
+        task3_1 = threading.Thread(target=self._resume_analysis())
 
         task1.start()
         task2.start()
         task3.start()
+        task3_1.start()
 
         # 等待关键任务完成（analysis_start 设置 Event）
         self.analysis_start_event.wait()
 
         # 依赖 analysis_start 的任务（可串行或再开线程）
-        task3_5 = threading.Thread(target=self.read_resume)
         task4 = threading.Thread(target=self._interview_evaluation)
         task5 = threading.Thread(target=self._self_evaluation)
         task6 = threading.Thread(target=self._analysis_end)
 
-        task3_5.start()
         task4.start()
         task5.start()
         task6.start()
@@ -122,7 +124,7 @@ class InterviewAnalysis:
         task1.join()
         task2.join()
         task3.join()
-        task3_5.join()
+        task3_1.join()
         task4.join()
         task5.join()
         task6.join()
@@ -139,21 +141,24 @@ class InterviewAnalysis:
         text = self.combine_slice_by_llm(asr_res, self.context_params.get('resume_info'))
         return text
 
-    def analysis(self, file_path: str):
+    def analysis(self, file_path: str = None):
         """"
         Interview Analysis Core Function
+        instance should be having two params : audio_file (optional if this func had file_path param) and resume_file
         :param file_path: Audio File Path
         :return:
         """
-        self.read_resume(file_path=self.resume_file)
-        text = self._split_audio_combine_2_text(file_path=file_path)
+        if not (file_path or self.audio_file):
+            raise Exception("audio_file or file_path is required")
+        if self.resume_file:
+            self.read_resume(file_path=self.resume_file)
+        text = self._split_audio_combine_2_text(file_path=file_path or self.audio_file)
         self.content = text
         self._task()
         return text
 
-    def read_resume_after(self, read_resume_result: tuple):
-        self.context_params['resume_info'] = read_resume_result[0]
-        self.context_params['resume_analysis'] = read_resume_result[1]
+    def read_resume_after(self, read_resume_result):
+        self.context_params['resume_info'] = read_resume_result
 
     @after_exec_4c(read_resume_after)
     @cache_with_params(key_template="InterviewAnalysis:resume_info:{file_path}", expire=3600)
@@ -163,14 +168,20 @@ class InterviewAnalysis:
         :param file_path:
         :return:
         """
-        if not file_path:
-            file_path = self.resume_file
-        # TODO 这里拆一下，简历分析 不要被缓存
+        if not (file_path or self.resume_file):
+            logger.warning("Warning when read_resume: file_path and self.resume_file both are empty!")
         resume_content = extract_pdf_text(file_path)
         resume_info = ez_llm(sys_msg=RESUME_JSON_EXTRACT_PROMPT, usr_msg=resume_content)
         resume_info_json = json.loads(resume_info)
-        resume_analysis = ez_llm(sys_msg=RESUME_ANALYSIS_PROMPT, usr_msg=resume_content)
-        return resume_info_json, resume_analysis
+        return resume_info_json
+
+
+    def _resume_analysis(self):
+        if not self.context_params.get('resume_info'):
+            return
+        resume_analysis = ez_llm(sys_msg=RESUME_ANALYSIS_PROMPT, usr_msg=str(self.context_params['resume_info']))
+        self.context_params['resume_analysis'] = resume_analysis
+
 
     def audio_2_text(self, file_path: str | list[str], max_workers: int = 25):
         """
@@ -243,8 +254,7 @@ if __name__ == "__main__":
     input_file = r'C:\Users\11243\Desktop\黄立强南方电网.m4a'
     resume_file_path = r'C:\Users\11243\Desktop\黄简历.pdf'
 
-    ins = InterviewAnalysis()
-    ins.resume_file = resume_file_path
-    ins.analysis(input_file)
+    ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
+    ins.analysis()
     # res = ins.read_resume(file_path=r"C:\Users\11243\Desktop\黄简历.pdf")
     # print(res)

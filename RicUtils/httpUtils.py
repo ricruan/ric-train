@@ -1,8 +1,46 @@
 import json
 import logging
 import os
+from enum import Enum
 
 import aiohttp
+
+class HttpStatus(Enum):
+    OK = 200
+    CREATED = 201
+    ACCEPTED = 202
+    BAD_REQUEST = 400
+    UNAUTHORIZED = 401
+    FORBIDDEN = 403
+    NOT_FOUND = 404
+    METHOD_NOT_ALLOWED = 405
+    INTERNAL_SERVER_ERROR = 500
+    NOT_IMPLEMENTED = 501
+    BAD_GATEWAY = 502
+    SERVICE_UNAVAILABLE = 503
+    GATEWAY_TIMEOUT = 504
+
+class HttpResponse:
+    def __init__(self, status_code: int | HttpStatus, data: dict | None, msg: str):
+        if not data:
+            data = {}
+        if isinstance(status_code,HttpStatus):
+            status_code = status_code.value
+
+        self.status_code = status_code
+        self.data = data
+        self.msg = msg
+
+
+    @staticmethod
+    def ok(data = None, msg: str = "success."):
+        return HttpResponse(HttpStatus.OK, data, msg)
+
+    @staticmethod
+    def error(msg: str = "error."):
+        return HttpResponse(HttpStatus.INTERNAL_SERVER_ERROR,None,msg)
+
+
 
 logger = logging.getLogger(__name__)
 TIMEOUT = int(os.getenv("HTTP_TIMEOUT",360))
