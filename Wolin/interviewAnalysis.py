@@ -9,10 +9,12 @@ from Client.asrClient import AsrClient
 from Client.qwen import ez_llm
 from Client.redisClient import RedisClient
 from RicUtils.audioFileUtils import AudioFileHandler
+from RicUtils.dateUtils import get_current_date
 from RicUtils.decoratorUtils import after_exec_4c
 from RicUtils.docUtils import generate_doc_with_jinja
 from RicUtils.pdfUtils import extract_pdf_text
 from RicUtils.redisUtils import cache_with_params
+from Service.emailService import EmailService
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
     CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT,  \
     RESUME_JSON_EXTRACT_PROMPT, RESUME_ANALYSIS_PROMPT
@@ -23,6 +25,7 @@ class InterviewAnalysis:
     asr_client = AsrClient()
     file_handler = AudioFileHandler()
     redis_client = RedisClient()
+    email_service = EmailService(receiver_emails=['2366692214@qq.com'])
 
     def __init__(self, audio_file: str, resume_file: str = ''):
         self.context_params = {
@@ -247,14 +250,46 @@ class InterviewAnalysis:
     def combine_slice_by_llm(slice_list: list[str] | str, resume_info: dict):
         return ez_llm(sys_msg=render(COMBINE_SLICE, {"resume_info": resume_info}), usr_msg=str(slice_list))
 
+    @staticmethod
+    def send_email(attachments:str | list[str],receives: list[str] = None):
+        """
+        发送邮件
+        :param attachments: 附件路径
+        :param receives: 接收人列表
+        :return:
+        """
+        content = \
+        """
+        <html>
+        <body>
+            <p><img src="cid:wolin" ></p>
+            <h1>你好！</h1>
+            <p>这是一封由<b>沃林数智</b>发送的面试报告邮件,请查收附件.</p>
+            <p>祝你今天愉快！</p>
+        </body>
+        </html>
+        """
+
+        InterviewAnalysis.email_service.send_emails_ric(
+            subject=f"面试报告 {get_current_date()}",
+            email_content=content,
+            receiver_emails = receives,
+            is_html=True,
+            attachments=attachments,
+            inline_images=[("../Wolin/static/wolin.jpg", "wolin")]
+        )
+        pass
+
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     # input_file = r"C:\Users\11243\Desktop\邱俊豪东风日产.aac"
-    input_file = r'C:\Users\11243\Desktop\黄立强南方电网.m4a'
-    resume_file_path = r'C:\Users\11243\Desktop\黄简历.pdf'
-
-    ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
-    ins.analysis()
+    # input_file = r'C:\Users\11243\Desktop\黄立强南方电网.m4a'
+    # resume_file_path = r'C:\Users\11243\Desktop\黄简历.pdf'
+    #
+    # ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
+    # ins.analysis()
+    InterviewAnalysis.send_email(attachments="./output_docxtpl.docx")
     # res = ins.read_resume(file_path=r"C:\Users\11243\Desktop\黄简历.pdf")
     # print(res)
