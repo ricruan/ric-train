@@ -95,8 +95,8 @@ class InterviewAnalysis:
         script_dir = os.path.dirname(os.path.abspath(__file__))
         template_path = os.path.join(script_dir, "template.docx")
         output_path = os.path.join(script_dir, "output_docxtpl.docx")
-        print("================")
-        print(self.context_params)
+        logger.debug("======报告上下文参数==========")
+        logger.debug(f'报告的参数上下文dict: {self.context_params}')
         generate_doc_with_jinja(template_path, output_path, self.context_params)
 
     def _task(self):
