@@ -67,11 +67,13 @@ class InterviewAnalysis:
 
     @staticmethod
     def clear_temp_report():
-        for value in InterviewAnalysis.temp_reports.values():
+        reports = json.loads(InterviewAnalysis.temp_reports.replace("'", '"'))
+        for key, value in reports.items():
             try:
                 os.unlink(value)
             except FileNotFoundError:
                 continue
+        InterviewAnalysis.redis_client.set(REDIS_TEMP_REPORT_KEY, str({}))
 
     def _update_redis_temp_report(self):
         InterviewAnalysis.redis_client.set(REDIS_TEMP_REPORT_KEY, str(self.temp_reports))
@@ -353,8 +355,10 @@ class InterviewAnalysis:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     # input_file = r"C:\Users\11243\Desktop\邱俊豪东风日产.aac"
-    # input_file = r'C:\Users\11243\Desktop\黄立强南方电网.m4a'
-    # resume_file_path = r'C:\Users\11243\Desktop\黄简历.pdf'
+    input_file = r'C:\Users\11243\Desktop\黄立强南方电网.m4a'
+    resume_file_path = r'C:\Users\11243\Desktop\黄简历.pdf'
+    InterviewAnalysis.clear_temp_report()
+    print(init_temp_reports())
     #
     # ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
     # ins.analysis()
