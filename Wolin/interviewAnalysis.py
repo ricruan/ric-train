@@ -310,11 +310,11 @@ class InterviewAnalysis:
             """处理单个音频文件，返回 (原始索引, ASR结果)"""
             index, audio_file = task_data
             try:
-                result = self.asr_client.asr(audio_file_path=audio_file, extract_response=True)
-                return index, result
-            except Exception as e:
-                logging.error(f"处理文件 {audio_file} 时出错: {e}")
-                return index, f"处理失败: {str(e)}"
+                asr_result = self.asr_client.asr(audio_file_path=audio_file, extract_response=True)
+                return index, asr_result
+            except Exception as asr_error:
+                logging.error(f"处理文件 {audio_file} 时出错: {asr_error}")
+                return index, f"处理失败: {str(asr_error)}"
 
         # 使用线程池并发处理
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
