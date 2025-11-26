@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 @router.post("/interview_analysis")
 async def interview_analysis(
+        receive_email: str,
+        user_name:str,
+        company_name:str,
         audio_file: UploadFile = File(...),
         resume_file: Optional[UploadFile] = None
 ):
@@ -24,7 +27,11 @@ async def interview_analysis(
 
     def run_analysis():
         try:
-            InterviewAnalysis(audio_file=audio_file_path, resume_file=resume_file_path).analysis()
+            InterviewAnalysis(audio_file=audio_file_path,
+                              resume_file=resume_file_path,
+                              receive_email=receive_email,
+                              user_name=user_name,
+                              company_name=company_name).analysis()
         except Exception as e:
             logger.error(f"[后台线程] InterviewAnalysis 发生异常: {e}")
         finally:

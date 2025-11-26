@@ -56,6 +56,22 @@ def after_exec_4c(after_func):
         return wrapper
     return decorator
 
+def after_exec_4c_no_params(after_func):
+    """
+    在函数执行完成之后，不传递第一个参数的结果 调用另外一个函数
+    4c 适用于类的方法 内部调用   args[0] 等同于 self
+    :param after_func:
+    :return:
+    """
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            # 先执行原函数
+            result = func(*args, **kwargs)
+            # 再执行“之后”的函数
+            after_func(args[0])
+            return result
+        return wrapper
+    return decorator
 
 def after_exec(after_func):
     """

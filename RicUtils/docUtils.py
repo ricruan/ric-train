@@ -1,24 +1,37 @@
 import json
 import os
+import tempfile
 from docxtpl import DocxTemplate
-from datetime import datetime
 
-def generate_doc_with_jinja(template_path, output_path, context):
+
+def generate_doc_with_jinja(template_path, context):
     """
-    使用 docxtpl 生成 Word 文档
-    :param template_path: 模板文件路径
-    :param output_path: 输出文件路径
+    使用 docxtpl 生成 Word 文档，并保存到临时文件夹，返回文件路径。
+    Warning: 使用这个函数要注意回收资源，及时清理临时文件
+    :param template_path: 模板文件路径（.docx 模板）
     :param context: 字典，包含模板变量
+    :return: 生成的临时文件的完整路径（str）
     """
+    # 1. 加载模板
     doc = DocxTemplate(template_path)
+
+    # 2. 渲染模板
     doc.render(context)
-    doc.save(output_path)
+
+    # 3. 创建临时文件（指定 .docx 后缀，不自动删除）
+    with tempfile.NamedTemporaryFile(delete=False,prefix='ric_report_', suffix='.docx') as tmp_file:
+        temp_path = tmp_file.name  # 获取临时文件路径
+
+    # 4. 保存文档到临时路径
+    doc.save(temp_path)
+
+    # 5. 返回临时文件路径
+    return temp_path
 
 # 示例用法
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
     template_path = os.path.join(script_dir, "template.docx")
-    output_path = os.path.join(script_dir, "output_docxtpl.docx")
 
     # 定义替换数据（支持 Jinja2 语法）
     context = {
@@ -85,7 +98,7 @@ if __name__ == "__main__":
   }
 ]
 }
-    generate_doc_with_jinja(template_path, output_path, context)
+    output_path = generate_doc_with_jinja(template_path, context)
     res = json.loads("""[{"question": "能不能结合具体例子"
     ,"answer": "我在基金APP一用to_c"
     ,"analysis": "回答结构清晰，列举辑），体现了实际动手能力。\\n缺乏对问题动形止范"}]""")

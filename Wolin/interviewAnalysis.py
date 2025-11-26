@@ -3,44 +3,82 @@ import logging
 import concurrent.futures
 import os
 import threading
+import uuid
 from typing import List, Tuple, Any
-
 from Client.asrClient import AsrClient
 from Client.qwen import ez_llm
 from Client.redisClient import RedisClient
 from RicUtils.audioFileUtils import AudioFileHandler
 from RicUtils.dateUtils import get_current_date
-from RicUtils.decoratorUtils import after_exec_4c
+from RicUtils.decoratorUtils import after_exec_4c, after_exec_4c_no_params
 from RicUtils.docUtils import generate_doc_with_jinja
 from RicUtils.pdfUtils import extract_pdf_text
 from RicUtils.redisUtils import cache_with_params
 from Service.emailService import EmailService
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
-    CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT,  \
+    CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, \
     RESUME_JSON_EXTRACT_PROMPT, RESUME_ANALYSIS_PROMPT
 
 logger = logging.getLogger(__name__)
+
+REDIS_PREFIX = "InterviewAnalysis"
+
+REDIS_TEMP_REPORT_KEY = f"{REDIS_PREFIX}:temp_reports"
+
+
+def init_temp_reports():
+    try:
+        return RedisClient().get(REDIS_TEMP_REPORT_KEY)
+    except Exception:
+        return {}
+
 
 class InterviewAnalysis:
     asr_client = AsrClient()
     file_handler = AudioFileHandler()
     redis_client = RedisClient()
     email_service = EmailService(receiver_emails=['2366692214@qq.com'])
+    temp_reports = init_temp_reports() or {}
 
-    def __init__(self, audio_file: str, resume_file: str = ''):
+    def __init__(self,
+                 audio_file: str,
+                 resume_file: str = '',
+                 receive_email: str = '',
+                 user_name: str = '',
+                 company_name: str = ''):
         self.context_params = {
-            "resume_info": {}
+            "resume_info": {
+                "name": user_name
+            }
         }
+        self.company_name = company_name
         self.analysis_start_event = threading.Event()
         self.content = ''
         self.resume_file = resume_file
         self.audio_file = audio_file
+        self.origin_resume_file = resume_file
+        self.origin_audio_file = audio_file
+        self.report_path = ''
+        self.uuid = uuid.uuid4().hex
+        self.user_email = ['2366692214@qq.com']
+        if receive_email:
+            self.user_email.append(receive_email)
         pass
+
+    @staticmethod
+    def clear_temp_report():
+        for value in InterviewAnalysis.temp_reports.values():
+            try:
+                os.unlink(value)
+            except FileNotFoundError:
+                continue
+
+    def _update_redis_temp_report(self):
+        InterviewAnalysis.redis_client.set(REDIS_TEMP_REPORT_KEY, str(self.temp_reports))
 
     def _analysis_start(self):
         """
         分析报告第一段
-        :param content:
         :return:
         """
         result = ez_llm(sys_msg=ANALYSIS_START_PROMPT, usr_msg=self.content)
@@ -51,7 +89,6 @@ class InterviewAnalysis:
     def _basic_report_json(self):
         """
         报告的基础JSON
-        :param content:
         :return:
         """
         result = ez_llm(sys_msg=REPORT_PROMPT, usr_msg=self.content)
@@ -62,7 +99,6 @@ class InterviewAnalysis:
     def _qa_analysis(self):
         """
         技术问题点评
-        :param content:
         :return:
         """
         result = ez_llm(sys_msg=CORE_QA_EXTRACT_PROMPT, usr_msg=self.content)
@@ -72,6 +108,10 @@ class InterviewAnalysis:
         return final_result
 
     def _interview_evaluation(self):
+        """
+        AI代入面试官评价
+        :return:
+        """
         result = ez_llm(
             sys_msg=render(INTERVIEW_EVALUATION_PROMPT, {"analysis_start": self.context_params['analysis_start']}),
             usr_msg=self.content)
@@ -79,6 +119,10 @@ class InterviewAnalysis:
         return result
 
     def _self_evaluation(self):
+        """
+        AI代入求职者评价
+        :return:
+        """
         result = ez_llm(
             sys_msg=render(SELF_EVALUATION_PROMPT, {"analysis_start": self.context_params['analysis_start']}),
             usr_msg=self.content)
@@ -86,20 +130,67 @@ class InterviewAnalysis:
         return result
 
     def _analysis_end(self):
+        """
+        分析报告最后一段
+        :return:
+        """
         result = ez_llm(sys_msg=render(ANALYSIS_END_PROMPT, {"analysis_start": self.context_params['analysis_start']}),
                         usr_msg=self.content)
         self.context_params['analysis_end'] = result
         return result
 
+    def _send_email(self, **kwargs):
+        """
+        发送邮件
+        :return:
+        """
+        name = self.context_params.get('resume_info').get('name', '小伙伴')
+        content = \
+            f"""
+        <html>
+        <body>
+            <p><img src="cid:wolin" ></p>
+            <h1>{name},你好！</h1>
+            <p>这是一封由<b>沃林数智</b>发送的面试报告邮件（ID：{self.uuid}）,请查收附件.</p>
+            <p>祝你今天愉快！</p>
+        </body>
+        </html>
+        """
+
+        try:
+            InterviewAnalysis.email_service.send_emails_ric(
+                subject=f"面试报告 {get_current_date()}",
+                email_content=content,
+                receiver_emails=self.user_email,
+                is_html=True,
+                attachments=self.report_path,
+                inline_images=[("../Wolin/static/wolin.jpg", "wolin")]
+            )
+        except Exception as e:
+            logger.error(f"邮件发送异常:{e}")
+        logger.info(f"邮件发送成功！ Receives_Email:{self.user_email}")
+
+    @after_exec_4c_no_params(_update_redis_temp_report)
+    @after_exec_4c_no_params(_send_email)
     def _generate_report(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         template_path = os.path.join(script_dir, "template.docx")
-        output_path = os.path.join(script_dir, "output_docxtpl.docx")
         logger.debug("======报告上下文参数==========")
         logger.debug(f'报告的参数上下文dict: {self.context_params}')
-        generate_doc_with_jinja(template_path, output_path, self.context_params)
 
-    def _task(self):
+        output_path = generate_doc_with_jinja(template_path, self.context_params)
+
+        logger.info(f"面试报告临时存储位置：\n {output_path}")
+        InterviewAnalysis.temp_reports[self.uuid] = output_path
+        if output_path:
+            self.report_path = output_path
+        return output_path
+
+    def _work_flow(self):
+        """
+        工作流
+        :return:
+        """
         # 可并行的任务（不依赖 analysis_start 结果）
         task1 = threading.Thread(target=self._analysis_start)
         task2 = threading.Thread(target=self._basic_report_json)
@@ -131,16 +222,25 @@ class InterviewAnalysis:
         task4.join()
         task5.join()
         task6.join()
-        task7 = threading.Thread(target=self._generate_report)
-        task7.start()
-        task7.join()
 
     @cache_with_params(key_template="InterviewAnalysis:split_audio:{file_path}", expire=3600)
     def _split_audio_combine_2_text(self, file_path: str):
+        """
+        对音频文件进行切片,ASR转化为文本，并合并切片文本
+        :param file_path: 音频文件路径
+        :return: 合并后文本
+        """
         temp_file_list = self.file_handler.split_audio_with_overlap_ffmpeg(input_audio_path=file_path
                                                                            , max_segment_duration=100
+                                                                           , overlap_duration=2
                                                                            , output_format='wav')
         asr_res = self.audio_2_text(temp_file_list)
+        # 感觉LLM拼之后丢了一些信息，打印查看下
+        try:
+            for i in asr_res:
+                logger.info(i)
+        except Exception:
+            pass
         text = self.combine_slice_by_llm(asr_res, self.context_params.get('resume_info'))
         return text
 
@@ -155,10 +255,11 @@ class InterviewAnalysis:
             raise Exception("audio_file or file_path is required")
         if self.resume_file:
             self.read_resume(file_path=self.resume_file)
-        text = self._split_audio_combine_2_text(file_path=file_path or self.audio_file)
-        self.content = text
-        self._task()
-        return text
+        self.content = self._split_audio_combine_2_text(file_path=file_path or self.origin_audio_file)
+        self._work_flow()
+        self._generate_report()
+        print("测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试v")
+        return self.content
 
     def read_resume_after(self, read_resume_result):
         self.context_params['resume_info'] = read_resume_result
@@ -178,15 +279,13 @@ class InterviewAnalysis:
         resume_info_json = json.loads(resume_info)
         return resume_info_json
 
-
     def _resume_analysis(self):
         if not self.context_params.get('resume_info'):
             return
         resume_analysis = ez_llm(sys_msg=RESUME_ANALYSIS_PROMPT, usr_msg=str(self.context_params['resume_info']))
         self.context_params['resume_analysis'] = resume_analysis
 
-
-    def audio_2_text(self, file_path: str | list[str], max_workers: int = 25):
+    def audio_2_text(self, file_path: str | list[str], max_workers: int = 50):
         """
         使用线程池并发运行 ASR 函数，并保持原始顺序
         
@@ -250,37 +349,6 @@ class InterviewAnalysis:
     def combine_slice_by_llm(slice_list: list[str] | str, resume_info: dict):
         return ez_llm(sys_msg=render(COMBINE_SLICE, {"resume_info": resume_info}), usr_msg=str(slice_list))
 
-    @staticmethod
-    def send_email(attachments:str | list[str],receives: list[str] = None):
-        """
-        发送邮件
-        :param attachments: 附件路径
-        :param receives: 接收人列表
-        :return:
-        """
-        content = \
-        """
-        <html>
-        <body>
-            <p><img src="cid:wolin" ></p>
-            <h1>你好！</h1>
-            <p>这是一封由<b>沃林数智</b>发送的面试报告邮件,请查收附件.</p>
-            <p>祝你今天愉快！</p>
-        </body>
-        </html>
-        """
-
-        InterviewAnalysis.email_service.send_emails_ric(
-            subject=f"面试报告 {get_current_date()}",
-            email_content=content,
-            receiver_emails = receives,
-            is_html=True,
-            attachments=attachments,
-            inline_images=[("../Wolin/static/wolin.jpg", "wolin")]
-        )
-        pass
-
-
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
@@ -290,6 +358,5 @@ if __name__ == "__main__":
     #
     # ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
     # ins.analysis()
-    InterviewAnalysis.send_email(attachments="./output_docxtpl.docx")
     # res = ins.read_resume(file_path=r"C:\Users\11243\Desktop\黄简历.pdf")
     # print(res)
