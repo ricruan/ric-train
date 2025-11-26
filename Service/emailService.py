@@ -46,4 +46,4 @@ class EmailService:
 
 if __name__ == '__main__':
     email_service = EmailService()
-    email_service.send_emails_ric(subject='❤情书❤' ,email_content="刘杰是猪猪！",attachments="../Wolin/output_docxtpl.docx")
+    email_service.send_emails_ric(subject='❤情书❤' ,email_content="测试邮件",attachments="../Wolin/output_docxtpl.docx")

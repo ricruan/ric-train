@@ -1,6 +1,6 @@
 from threading import Lock
 
-
+# todo 之前用过一次 好像会有问题
 def singleton(cls):
     """
     单例模式装饰器
