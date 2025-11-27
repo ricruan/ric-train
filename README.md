@@ -102,3 +102,15 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 2. 根据实际需求调整 `init.sql` 中的表结构
 3. 建议使用环境变量管理敏感信息
 4. 定期备份数据库数据
+
+
+  docker run -d \
+  --name minio \
+  --restart=unless-stopped \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  -e MINIO_ROOT_USER="xxx" \
+  -e MINIO_ROOT_PASSWORD="xxxAr!" \
+  -v minio_data:/data \
+  minio/minio \
+    server /data --address ":9000" --console-address ":9001"

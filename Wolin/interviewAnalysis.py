@@ -9,6 +9,7 @@ from Client.asrClient import AsrClient
 from Client.qwen import ez_llm
 from Client.redisClient import RedisClient
 from RicUtils.audioFileUtils import AudioFileHandler
+from RicUtils.dataUtils import short_unique_hash
 from RicUtils.dateUtils import get_current_date
 from RicUtils.decoratorUtils import after_exec_4c, after_exec_4c_no_params
 from RicUtils.docUtils import generate_doc_with_jinja
@@ -46,24 +47,24 @@ class InterviewAnalysis:
                  receive_email: str = '',
                  user_name: str = '',
                  company_name: str = ''):
-        self.context_params = {
-            "resume_info": {
-                "name": user_name
+        self.audio_duration = None # 音频时长
+        self.context_params = {    # 模板上下文
+            "resume_info": {       # 简历信息
+                "name": user_name  # 用户姓名
             }
         }
-        self.company_name = company_name
-        self.analysis_start_event = threading.Event()
-        self.content = ''
-        self.resume_file = resume_file
-        self.audio_file = audio_file
-        self.origin_resume_file = resume_file
-        self.origin_audio_file = audio_file
-        self.report_path = ''
-        self.uuid = uuid.uuid4().hex
-        self.user_email = ['2366692214@qq.com']
+        self.company_name = company_name # 面试公司
+        self.analysis_start_event = threading.Event() # 工作流event
+        self.content = ''    # asr 文本内容
+        self.resume_file = resume_file # 简历文件路径
+        self.audio_file = audio_file # 音频文件路径
+        self.origin_resume_file = resume_file # 原始简历文件路径
+        self.origin_audio_file = audio_file # 原始音频文件路径
+        self.report_path = '' # 报告路径
+        self.uuid = uuid.uuid4().hex # 唯一标识
+        self.user_email = ['2366692214@qq.com'] # 报告接收邮箱
         if receive_email:
             self.user_email.append(receive_email)
-        pass
 
     @staticmethod
     def clear_temp_report():
@@ -141,7 +142,7 @@ class InterviewAnalysis:
         self.context_params['analysis_end'] = result
         return result
 
-    def _send_email(self, **kwargs):
+    def _send_email(self):
         """
         发送邮件
         :return:
@@ -225,13 +226,41 @@ class InterviewAnalysis:
         task5.join()
         task6.join()
 
-    @cache_with_params(key_template="InterviewAnalysis:split_audio:{file_path}", expire=3600)
+
+    def _get_audio_handle_cache_key(self, file_path: str):
+        """
+        redis key = user_name + audio_duration + file_path
+         => hash str
+        :param file_path:
+        :return:
+        """
+        if not self.audio_duration:
+            self.audio_duration = AudioFileHandler.get_audio_duration(file_path)
+        new_key = self.context_params.get('resume_info').get('name') + str(self.audio_duration) + file_path
+        redis_key = REDIS_PREFIX + short_unique_hash(new_key)
+        return redis_key
+
+    def _get_audio_handle_cache(self, file_path: str):
+        """
+        redis cache 4 audio_asr_handle
+        :param file_path:
+        :return:
+        """
+        result = InterviewAnalysis.redis_client.get(self._get_audio_handle_cache_key(file_path))
+        return result
+
+
     def _split_audio_combine_2_text(self, file_path: str):
         """
         对音频文件进行切片,ASR转化为文本，并合并切片文本
+        With Cache of Redis
         :param file_path: 音频文件路径
         :return: 合并后文本
         """
+        result = self._get_audio_handle_cache(file_path)
+        if result:
+            logger.info("Cache was used during audio processing.")
+            return result
         temp_file_list = self.file_handler.split_audio_with_overlap_ffmpeg(input_audio_path=file_path
                                                                            , max_segment_duration=100
                                                                            , overlap_duration=2
@@ -244,6 +273,7 @@ class InterviewAnalysis:
         except Exception:
             pass
         text = self.combine_slice_by_llm(asr_res, self.context_params.get('resume_info'))
+        InterviewAnalysis.redis_client.set(self._get_audio_handle_cache_key(file_path), text, ex=3600)
         return text
 
     def analysis(self, file_path: str = None):
@@ -260,7 +290,6 @@ class InterviewAnalysis:
         self.content = self._split_audio_combine_2_text(file_path=file_path or self.origin_audio_file)
         self._work_flow()
         self._generate_report()
-        print("测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试测试v")
         return self.content
 
     def read_resume_after(self, read_resume_result):
@@ -357,10 +386,9 @@ if __name__ == "__main__":
     # input_file = r"C:\Users\11243\Desktop\邱俊豪东风日产.aac"
     input_file = r'C:\Users\11243\Desktop\黄立强南方电网.m4a'
     resume_file_path = r'C:\Users\11243\Desktop\黄简历.pdf'
-    InterviewAnalysis.clear_temp_report()
-    print(init_temp_reports())
-    #
-    # ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
-    # ins.analysis()
-    # res = ins.read_resume(file_path=r"C:\Users\11243\Desktop\黄简历.pdf")
+    # InterviewAnalysis.clear_temp_report()
+    # print(init_temp_reports())
+    ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
+    ins.analysis()
+    # res = ins.read_resume(file_path=r'C:\Users\11243\Desktop\黄简历.pdf')
     # print(res)

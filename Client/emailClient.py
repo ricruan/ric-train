@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 import smtplib
 from email.mime.image import MIMEImage
@@ -9,6 +10,8 @@ import os
 import dotenv
 
 dotenv.load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 def send_email(
     sender_email,
@@ -56,7 +59,7 @@ def send_email(
         if inline_images:
             for img_path, content_id in inline_images:
                 if not os.path.exists(img_path):
-                    print(f"警告：内联图片文件不存在 - {img_path}")
+                    logger.warning(f"警告：内联图片文件不存在 - {img_path}")
                     continue
                 # 猜测图片MIME类型
                 ctype, encoding = mimetypes.guess_type(img_path)
@@ -78,7 +81,7 @@ def send_email(
                 attachments = [attachments]
             for attachment_path in attachments:
                 if not os.path.exists(attachment_path):
-                    print(f"警告：附件文件不存在 - {attachment_path}")
+                    logger.warning(f"警告：附件文件不存在 - {attachment_path}")
                     continue
 
                 with open(attachment_path, 'rb') as f:
@@ -101,11 +104,11 @@ def send_email(
 
         # 关闭连接
         server.quit()
-        print("邮件发送成功！")
+        logger.info("邮件发送成功！")
         return True
 
     except Exception as e:
-        print(f"邮件发送失败：{e}")
+        logger.error(f"邮件发送失败：{e}")
         return False
 
 if __name__ == '__main__':
