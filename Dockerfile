@@ -1,4 +1,4 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.13-slim-bookworm
 # 设置工作目录
 WORKDIR /app
 
@@ -15,6 +15,8 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debia
     gcc \
     default-libmysqlclient-dev \
     pkg-config \
+    curl \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制依赖文件

@@ -104,6 +104,22 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 4. 定期备份数据库数据
 
 
+## 笔记
+这是实际开发中打包镜像 部署docker容器时会用的命令  [wolin-ai:0.1.5] 镜像名和版本可自行修改 
+
+
+docker build -t wolin-ai:0.1.10 .
+
+
+docker save -o wolin-ai-0.1.10.tar wolin-ai:0.1.10
+
+
+docker load -i wolin-ai-0.1.10.tar
+
+
+docker run -p 8000:8000 --env-file .env -d -v ai_upload_volume:/app/uploads --name wolin-ai-0110 wolin-ai:0.1.10
+
+
   docker run -d \
   --name minio \
   --restart=unless-stopped \
