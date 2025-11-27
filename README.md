@@ -118,7 +118,7 @@ docker load -i wolin-ai-0.1.10.tar
 
 
 docker run -p 8000:8000 --env-file .env -d -v ai_upload_volume:/app/uploads --name wolin-ai-0110 wolin-ai:0.1.10
-
+docker run --name wolin-ai -p 8000:8000 --env-file .env --restart unless-stopped wolin-ai:0.1.10
 
   docker run -d \
   --name minio \
