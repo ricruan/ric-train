@@ -29,7 +29,7 @@ REDIS_TEMP_REPORT_KEY = f"{REDIS_PREFIX}:temp_reports"
 
 def init_temp_reports():
     try:
-        return RedisClient().get(REDIS_TEMP_REPORT_KEY)
+        return json.loads(RedisClient().get(REDIS_TEMP_REPORT_KEY))
     except Exception:
         return {}
 
@@ -167,7 +167,7 @@ class InterviewAnalysis:
                 receiver_emails=self.user_email,
                 is_html=True,
                 attachments=self.report_path,
-                inline_images=[("../Wolin/static/wolin.jpg", "wolin")]
+                inline_images=[("Wolin/static/wolin.jpg", "wolin")]
             )
         except Exception as e:
             logger.error(f"邮件发送异常:{e}")
@@ -387,8 +387,8 @@ if __name__ == "__main__":
     input_file = r'C:\Users\11243\Desktop\黄立强南方电网.m4a'
     resume_file_path = r'C:\Users\11243\Desktop\黄简历.pdf'
     # InterviewAnalysis.clear_temp_report()
-    # print(init_temp_reports())
-    ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
-    ins.analysis()
+    print(init_temp_reports())
+    # ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
+    # ins.analysis()
     # res = ins.read_resume(file_path=r'C:\Users\11243\Desktop\黄简历.pdf')
     # print(res)

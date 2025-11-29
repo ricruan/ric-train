@@ -11,7 +11,18 @@ import dotenv
 
 dotenv.load_dotenv()
 
+# 获取项目根目录的绝对路径
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 logger = logging.getLogger(__name__)
+
+def _to_absolute_path(file_path):
+    """
+    将相对路径转换为基于项目根目录的绝对路径
+    """
+    if os.path.isabs(file_path):
+        return file_path
+    return os.path.join(PROJECT_ROOT, file_path)
 
 def send_email(
     sender_email,
@@ -58,21 +69,23 @@ def send_email(
             # 添加内联图片
         if inline_images:
             for img_path, content_id in inline_images:
-                if not os.path.exists(img_path):
-                    logger.warning(f"警告：内联图片文件不存在 - {img_path}")
+                # 转换为绝对路径
+                abs_img_path = _to_absolute_path(img_path)
+                if not os.path.exists(abs_img_path):
+                    logger.warning(f"警告：内联图片文件不存在 - {abs_img_path} (原始路径: {img_path})")
                     continue
                 # 猜测图片MIME类型
                 ctype, encoding = mimetypes.guess_type(img_path)
                 if ctype is None or encoding is not None:
                     ctype = 'application/octet-stream'  # 无法猜测时使用通用类型
                 maintype, subtype = ctype.split('/', 1)
-                with open(img_path, 'rb') as fp:
+                with open(abs_img_path, 'rb') as fp:
                     if maintype == 'image':
                         img = MIMEImage(fp.read(), _subtype=subtype)
                     else:  # 如果不是图片类型，作为普通应用附件处理
                         img = MIMEApplication(fp.read(), _subtype=subtype)
                     img.add_header('Content-ID', f'<{content_id}>')  # 设置Content-ID
-                    img.add_header('Content-Disposition', 'inline', filename=os.path.basename(img_path))
+                    img.add_header('Content-Disposition', 'inline', filename=os.path.basename(abs_img_path))
                     msg.attach(img)
 
         # 添加附件
@@ -80,13 +93,15 @@ def send_email(
             if isinstance(attachments,str):
                 attachments = [attachments]
             for attachment_path in attachments:
-                if not os.path.exists(attachment_path):
-                    logger.warning(f"警告：附件文件不存在 - {attachment_path}")
+                # 转换为绝对路径
+                abs_attachment_path = _to_absolute_path(attachment_path)
+                if not os.path.exists(abs_attachment_path):
+                    logger.warning(f"警告：附件文件不存在 - {abs_attachment_path} (原始路径: {attachment_path})")
                     continue
 
-                with open(attachment_path, 'rb') as f:
-                    part = MIMEApplication(f.read(), _subtype=os.path.basename(attachment_path).split('.')[-1])
-                    part.add_header('Content-Disposition', 'attachment', filename=os.path.basename(attachment_path))
+                with open(abs_attachment_path, 'rb') as f:
+                    part = MIMEApplication(f.read(), _subtype=os.path.basename(abs_attachment_path).split('.')[-1])
+                    part.add_header('Content-Disposition', 'attachment', filename=os.path.basename(abs_attachment_path))
                     msg.attach(part)
 
         # 连接SMTP服务器
