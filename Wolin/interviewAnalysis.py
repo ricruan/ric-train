@@ -2,10 +2,12 @@ import json
 import logging
 import concurrent.futures
 import os
+import tempfile
 import threading
 import uuid
 from typing import List, Tuple, Any
 from Client.asrClient import AsrClient
+from Client.minioClient import MinioClient
 from Client.qwen import ez_llm
 from Client.redisClient import RedisClient
 from RicUtils.audioFileUtils import AudioFileHandler
@@ -19,6 +21,7 @@ from Service.emailService import EmailService
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
     CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, \
     RESUME_JSON_EXTRACT_PROMPT, RESUME_ANALYSIS_PROMPT
+from Wolin.service.interviewService import save_file_into_minio
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +68,10 @@ class InterviewAnalysis:
         self.user_email = ['2366692214@qq.com'] # 报告接收邮箱
         if receive_email:
             self.user_email.append(receive_email)
+
+    def _get_username(self,nvl_name: str = ''):
+        return self.context_params.get('resume_info').get('name',nvl_name)
+
 
     @staticmethod
     def clear_temp_report():
@@ -147,9 +154,9 @@ class InterviewAnalysis:
         发送邮件
         :return:
         """
-        name = self.context_params.get('resume_info').get('name', '小伙伴')
+        name = self._get_username('小伙伴')
         content = \
-            f"""
+        f"""
         <html>
         <body>
             <p><img src="cid:wolin" ></p>
@@ -182,6 +189,9 @@ class InterviewAnalysis:
         logger.debug(f'报告的参数上下文dict: {self.context_params}')
 
         output_path = generate_doc_with_jinja(template_path, self.context_params)
+        save_file_into_minio(user_name=self._get_username('未知姓名'),
+                             file_path=output_path,
+                             object_name=f'{self.company_name}面试报告.docx')
 
         logger.info(f"面试报告临时存储位置：\n {output_path}")
         InterviewAnalysis.temp_reports[self.uuid] = output_path
@@ -236,7 +246,7 @@ class InterviewAnalysis:
         """
         if not self.audio_duration:
             self.audio_duration = AudioFileHandler.get_audio_duration(file_path)
-        new_key = self.context_params.get('resume_info').get('name') + str(self.audio_duration) + file_path
+        new_key = self._get_username() + str(self.audio_duration) + file_path
         redis_key = REDIS_PREFIX + short_unique_hash(new_key)
         return redis_key
 
@@ -372,6 +382,18 @@ class InterviewAnalysis:
 
         # 提取结果，去除索引
         ordered_results = [result for index, result in results_with_index]
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=True, encoding='utf-8') as tmp_file:
+            # 写入每行（添加换行符）
+            for line in ordered_results:
+                tmp_file.write(line + '\n')
+
+            # 刷新确保内容写入磁盘（某些场景需要）
+            tmp_file.flush()
+
+            MinioClient().upload_file(bucket_name=self._get_username(),
+                                      object_name=f'{self.company_name}面试录音对话',
+                                      file_path=tmp_file.name)
 
         logging.info(f"并发处理完成，共处理 {len(ordered_results)} 个文件")
         return ordered_results
