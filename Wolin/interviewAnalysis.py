@@ -21,7 +21,6 @@ from Service.emailService import EmailService
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
     CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, \
     RESUME_JSON_EXTRACT_PROMPT, RESUME_ANALYSIS_PROMPT
-from Wolin.service.interviewService import save_file_into_minio
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +68,7 @@ class InterviewAnalysis:
         if receive_email:
             self.user_email.append(receive_email)
 
-    def _get_username(self,nvl_name: str = ''):
+    def get_username(self, nvl_name: str = ''):
         return self.context_params.get('resume_info').get('name',nvl_name)
 
 
@@ -154,7 +153,7 @@ class InterviewAnalysis:
         发送邮件
         :return:
         """
-        name = self._get_username('小伙伴')
+        name = self.get_username('小伙伴')
         content = \
         f"""
         <html>
@@ -189,10 +188,6 @@ class InterviewAnalysis:
         logger.debug(f'报告的参数上下文dict: {self.context_params}')
 
         output_path = generate_doc_with_jinja(template_path, self.context_params)
-        save_file_into_minio(user_name=self._get_username('未知姓名'),
-                             file_path=output_path,
-                             object_name=f'{self.company_name}面试报告.docx')
-
         logger.info(f"面试报告临时存储位置：\n {output_path}")
         InterviewAnalysis.temp_reports[self.uuid] = output_path
         if output_path:
@@ -246,7 +241,7 @@ class InterviewAnalysis:
         """
         if not self.audio_duration:
             self.audio_duration = AudioFileHandler.get_audio_duration(file_path)
-        new_key = self._get_username() + str(self.audio_duration) + file_path
+        new_key = self.get_username() + str(self.audio_duration) + file_path
         redis_key = REDIS_PREFIX + short_unique_hash(new_key)
         return redis_key
 
@@ -391,7 +386,7 @@ class InterviewAnalysis:
             # 刷新确保内容写入磁盘（某些场景需要）
             tmp_file.flush()
 
-            MinioClient().upload_file(bucket_name=self._get_username(),
+            MinioClient().upload_file(bucket_name=self.get_username(),
                                       object_name=f'{self.company_name}面试录音对话',
                                       file_path=tmp_file.name)
 

@@ -1,5 +1,9 @@
 from threading import Lock
 
+class EarlyStop(Exception):
+    """早停,此异常用于提前结束函数，非业务或功能异常"""
+    pass
+
 # todo 之前用过一次 好像会有问题
 def singleton(cls):
     """
@@ -31,7 +35,10 @@ def params_handle_4c(before_func):
     """
     def decorator(func):
         def wrapper(*args, **kwargs):
-            new_params = before_func(args[0], kwargs)
+            try:
+                new_params = before_func(args[0], kwargs)
+            except EarlyStop :
+                return None
             # 先执行原函数
             result = func(*args, **{**kwargs, **new_params})
             # 再执行“之后”的函数
