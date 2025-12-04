@@ -58,7 +58,7 @@ def ez_llm(sys_msg: str, usr_msg: str):
 if __name__ == '__main__':
     # res = chatLLM.invoke([HumanMessage(content="hi")])
     # print(res.content)
-    res = ez_llm(sys_msg="你是一个有趣的AI助理，你能帮助我完成以下任务：\n",usr_msg='你好')
+    res = ez_llm(sys_msg="you are a helpful ai assistant：\n",usr_msg='你好,给我讲个地狱笑话')
     print(res)
     # res = chatLLM.stream([HumanMessage(content="1 + 1 = ?")])
     # for r in res:
