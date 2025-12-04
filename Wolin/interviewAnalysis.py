@@ -68,6 +68,7 @@ class InterviewAnalysis:
         if receive_email:
             self.user_email.append(receive_email)
 
+    @property
     def get_username(self, nvl_name: str = ''):
         return self.context_params.get('resume_info').get('name',nvl_name)
 
@@ -153,7 +154,7 @@ class InterviewAnalysis:
         发送邮件
         :return:
         """
-        name = self.get_username('小伙伴')
+        name = self.get_username or '小伙伴'
         content = \
         f"""
         <html>
@@ -241,7 +242,7 @@ class InterviewAnalysis:
         """
         if not self.audio_duration:
             self.audio_duration = AudioFileHandler.get_audio_duration(file_path)
-        new_key = self.get_username() + str(self.audio_duration) + file_path
+        new_key = self.get_username + str(self.audio_duration) + file_path
         redis_key = REDIS_PREFIX + short_unique_hash(new_key)
         return redis_key
 
@@ -378,17 +379,21 @@ class InterviewAnalysis:
         # 提取结果，去除索引
         ordered_results = [result for index, result in results_with_index]
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=True, encoding='utf-8') as tmp_file:
+        temp_file_path = ''
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', encoding='utf-8') as tmp_file:
             # 写入每行（添加换行符）
             for line in ordered_results:
                 tmp_file.write(line + '\n')
 
             # 刷新确保内容写入磁盘（某些场景需要）
             tmp_file.flush()
+            temp_file_path = tmp_file.name
 
-            MinioClient().upload_file(bucket_name=self.get_username(),
-                                      object_name=f'{self.company_name}面试录音对话',
-                                      file_path=tmp_file.name)
+        MinioClient().upload_file(bucket_name="audio-text",
+                                  object_name=f'{self.get_username}/{self.company_name}.txt',
+                                  file_path=temp_file_path)
+
+        os.unlink(temp_file_path)
 
         logging.info(f"并发处理完成，共处理 {len(ordered_results)} 个文件")
         return ordered_results
@@ -404,8 +409,8 @@ if __name__ == "__main__":
     input_file = r'C:\Users\11243\Desktop\黄立强南方电网.m4a'
     resume_file_path = r'C:\Users\11243\Desktop\黄简历.pdf'
     # InterviewAnalysis.clear_temp_report()
-    print(init_temp_reports())
-    # ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
-    # ins.analysis()
+    # print(init_temp_reports())
+    ins = InterviewAnalysis(audio_file=input_file,resume_file=resume_file_path)
+    ins.analysis()
     # res = ins.read_resume(file_path=r'C:\Users\11243\Desktop\黄简历.pdf')
     # print(res)
