@@ -302,6 +302,11 @@ class InterviewAnalysis:
         self._generate_report()
         return self.content
 
+
+    def audio_2_text_public(self, file_path: str = None):
+        self.content = self._split_audio_combine_2_text(file_path=file_path or self.origin_audio_file)
+        return self.content
+
     def read_resume_after(self, read_resume_result):
         self.context_params['resume_info'] = read_resume_result
 
