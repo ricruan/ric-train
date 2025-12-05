@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>面试分析系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .title {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="email"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            color: #6c757d;
+        }
+
+        .file-input-label:hover {
+            background: #e9ecef;
+            border-color: #667eea;
+        }
+
+        .file-input-label.has-file {
+            background: #e7f3ff;
+            border-color: #667eea;
+            color: #0056b3;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+            color: #667eea;
+        }
+
+        .result {
+            display: none;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .optional-text {
+            font-size: 12px;
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">面试分析系统</h1>
+
+        <form id="interviewForm">
+            <div class="form-group">
+                <label for="receive_email">接收邮箱 *</label>
+                <input type="email" id="receive_email" name="receive_email" required placeholder="请输入接收分析结果的邮箱">
+            </div>
+
+            <div class="form-group">
+                <label for="user_name">用户名 *</label>
+                <input type="text" id="user_name" name="user_name" required placeholder="请输入用户名">
+            </div>
+
+            <div class="form-group">
+                <label for="company_name">公司名称 *</label>
+                <input type="text" id="company_name" name="company_name" required placeholder="请输入公司名称">
+            </div>
+
+            <div class="form-group">
+                <label for="audio_file">音频文件 *</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="audio_file" name="audio_file" class="file-input" accept="audio/*" required>
+                    <label for="audio_file" class="file-input-label" id="audio_label">
+                        点击选择音频文件 (支持 mp3, wav, m4a等)
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="resume_file">简历文件 <span class="optional-text">(可选)</span></label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="resume_file" name="resume_file" class="file-input" accept=".pdf,.doc,.docx">
+                    <label for="resume_file" class="file-input-label" id="resume_label">
+                        点击选择简历文件 (支持 PDF, DOC, DOCX)
+                    </label>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn" id="submitBtn">
+                开始分析
+            </button>
+        </form>
+
+        <div class="loading" id="loading">
+            <p>⏳ 正在分析中，请稍候...</p>
+        </div>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        // 文件选择处理
+        document.getElementById('audio_file').addEventListener('change', function(e) {
+            const label = document.getElementById('audio_label');
+            if (e.target.files.length > 0) {
+                label.textContent = `已选择: ${e.target.files[0].name}`;
+                label.classList.add('has-file');
+            } else {
+                label.textContent = '点击选择音频文件 (支持 mp3, wav, m4a等)';
+                label.classList.remove('has-file');
+            }
+        });
+
+        document.getElementById('resume_file').addEventListener('change', function(e) {
+            const label = document.getElementById('resume_label');
+            if (e.target.files.length > 0) {
+                label.textContent = `已选择: ${e.target.files[0].name}`;
+                label.classList.add('has-file');
+            } else {
+                label.textContent = '点击选择简历文件 (支持 PDF, DOC, DOCX)';
+                label.classList.remove('has-file');
+            }
+        });
+
+        // 表单提交处理
+        document.getElementById('interviewForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+
+            // 获取表单数据
+            const formData = new FormData();
+            formData.append('receive_email', document.getElementById('receive_email').value);
+            formData.append('user_name', document.getElementById('user_name').value);
+            formData.append('company_name', document.getElementById('company_name').value);
+
+            const audioFile = document.getElementById('audio_file').files[0];
+            const resumeFile = document.getElementById('resume_file').files[0];
+
+            if (!audioFile) {
+                showResult('请选择音频文件', 'error');
+                return;
+            }
+
+            formData.append('audio_file', audioFile);
+            if (resumeFile) {
+                formData.append('resume_file', resumeFile);
+            }
+
+            // 显示加载状态
+            submitBtn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+
+            try {
+                const response = await fetch('/interview/interview_analysis', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResult('✅ ' + (data.msg || '提交成功，分析结果将发送到您的邮箱'), 'success');
+                    // 重置表单
+                    document.getElementById('interviewForm').reset();
+                    document.getElementById('audio_label').textContent = '点击选择音频文件 (支持 mp3, wav, m4a等)';
+                    document.getElementById('audio_label').classList.remove('has-file');
+                    document.getElementById('resume_label').textContent = '点击选择简历文件 (支持 PDF, DOC, DOCX)';
+                    document.getElementById('resume_label').classList.remove('has-file');
+                } else {
+                    showResult('❌ ' + (data.detail || data.msg || '提交失败'), 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showResult('❌ 网络错误，请检查网络连接后重试', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        function showResult(message, type) {
+            const result = document.getElementById('result');
+            result.textContent = message;
+            result.className = 'result ' + type;
+            result.style.display = 'block';
+        }
+    </script>
+</body>

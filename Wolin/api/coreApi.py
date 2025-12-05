@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 
-from fastapi import APIRouter, UploadFile, File, Response
+from fastapi import APIRouter, UploadFile, File, Form, Response
 
 from RicUtils.fileUtils import save_upload_file_to_temp
 from RicUtils.httpUtils import HttpResponse
@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 
 @router.post("/interview_analysis")
 async def interview_analysis(
-        receive_email: str,
-        user_name: str,
-        company_name: str,
+        receive_email: str = Form(...),
+        user_name: str = Form(...),
+        company_name: str = Form(...),
         audio_file: UploadFile = File(...),
         resume_file: Optional[UploadFile] = None
 ):
