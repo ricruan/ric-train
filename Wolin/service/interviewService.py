@@ -13,7 +13,7 @@ class InterviewAnalysisService:
             self.instance = instance
 
 
-    def _precondition(self):
+    def _precondition(self,params):
         if not InterviewAnalysisService.minio_async_client.is_active:
             raise EarlyStop
         if not self.instance:

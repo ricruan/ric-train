@@ -36,7 +36,7 @@ def params_handle_4c(before_func):
     def decorator(func):
         def wrapper(*args, **kwargs):
             try:
-                new_params = before_func(args[0], kwargs)
+                new_params = before_func(args[0], kwargs) or {}
             except EarlyStop :
                 return None
             # 先执行原函数

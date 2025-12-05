@@ -34,7 +34,8 @@ async def interview_analysis(
                                                   receive_email=receive_email,
                                                   user_name=user_name,
                                                   company_name=company_name)
-            InterviewAnalysisService(analysis_instance).save_origin_file_2_minio()
+            service = InterviewAnalysisService(analysis_instance)
+            service.save_origin_file_2_minio()
             analysis_instance.analysis()
         except Exception as e:
             logger.error(f"[后台线程] InterviewAnalysis 发生异常: {e}", stack_info=True)

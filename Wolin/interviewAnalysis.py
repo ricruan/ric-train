@@ -176,9 +176,10 @@ class InterviewAnalysis:
                 attachments=self.report_path,
                 inline_images=[("Wolin/static/wolin.jpg", "wolin")]
             )
+            logger.info(f"邮件发送成功！ Receives_Email:{self.user_email}")
         except Exception as e:
             logger.error(f"邮件发送异常:{e}")
-        logger.info(f"邮件发送成功！ Receives_Email:{self.user_email}")
+
 
     @after_exec_4c_no_params(_update_redis_temp_report)
     @after_exec_4c_no_params(_send_email)
@@ -191,6 +192,9 @@ class InterviewAnalysis:
         output_path = generate_doc_with_jinja(template_path, self.context_params)
         logger.info(f"面试报告临时存储位置：\n {output_path}")
         InterviewAnalysis.temp_reports[self.uuid] = output_path
+        MinioClient().upload_file(bucket_name="interview-report",
+                                  object_name=f'{self.get_username}/{self.company_name or get_current_date()}.docx',
+                                  file_path=output_path)
         if output_path:
             self.report_path = output_path
         return output_path
@@ -380,7 +384,7 @@ class InterviewAnalysis:
         ordered_results = [result for index, result in results_with_index]
 
         temp_file_path = ''
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', encoding='utf-8') as tmp_file:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt',delete=False, encoding='utf-8') as tmp_file:
             # 写入每行（添加换行符）
             for line in ordered_results:
                 tmp_file.write(line + '\n')
@@ -390,7 +394,7 @@ class InterviewAnalysis:
             temp_file_path = tmp_file.name
 
         MinioClient().upload_file(bucket_name="audio-text",
-                                  object_name=f'{self.get_username}/{self.company_name}.txt',
+                                  object_name=f'{self.get_username}/{self.company_name or get_current_date()}.txt',
                                   file_path=temp_file_path)
 
         os.unlink(temp_file_path)
