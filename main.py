@@ -12,6 +12,8 @@ from Wolin.api.coreApi import router as interview_router
 
 app = FastAPI()
 
+import Wolin.frontend.fastapi_init
+
 app.include_router(interview_router, prefix="/interview", tags=["Interview"])
 
 
@@ -23,4 +25,4 @@ def read_root(sql:str= Body(..., embed=True)):
 
 if __name__ == '__main__':
     import uvicorn
-    uvicorn.run(app="main:app", host="0.0.0.0", port=8001)
+    uvicorn.run(app="main:app", host="0.0.0.0", port=8000)

@@ -27,7 +27,9 @@ async def interview_analysis(
         resume_file: Optional[UploadFile] = None
 ):
     audio_file_path = await save_upload_file_to_temp(audio_file, use_original_filename=True)
-    resume_file_path = await save_upload_file_to_temp(resume_file, use_original_filename=True)
+    resume_file_path = None
+    if resume_file:
+        resume_file_path = await save_upload_file_to_temp(resume_file, use_original_filename=True)
 
     def run_analysis():
         try:
@@ -42,9 +44,9 @@ async def interview_analysis(
         except Exception as e:
             logger.error(f"[后台线程] InterviewAnalysis 发生异常: {e}", stack_info=True)
         finally:
-            if os.path.exists(audio_file_path):
+            if audio_file_path and os.path.exists(audio_file_path):
                 os.unlink(audio_file_path)
-            if os.path.exists(resume_file_path):
+            if resume_file_path and os.path.exists(resume_file_path):
                 os.unlink(resume_file_path)
 
     # 3. 后台启动一个线程运行它（不阻塞当前请求）
