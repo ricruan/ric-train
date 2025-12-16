@@ -2,7 +2,6 @@ import logging
 from RicUtils.config.logConfig import setup_logging
 # 日志配置初始化
 setup_logging()
-from typing import Union
 
 from fastapi import FastAPI, Body
 
@@ -12,7 +11,6 @@ from Wolin.api.coreApi import router as interview_router
 
 app = FastAPI()
 
-import Wolin.frontend.fastapi_init
 
 app.include_router(interview_router, prefix="/interview", tags=["Interview"])
 

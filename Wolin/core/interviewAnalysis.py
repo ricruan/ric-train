@@ -185,7 +185,7 @@ class InterviewAnalysis:
     @after_exec_4c_no_params(_send_email)
     def _generate_report(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        template_path = os.path.join(script_dir, "template.docx")
+        template_path = os.path.join(script_dir, "../static/template.docx")
         logger.debug("======报告上下文参数==========")
         logger.debug(f'报告的参数上下文dict: {self.context_params}')
 
