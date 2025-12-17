@@ -11,7 +11,7 @@ BASE_DIR = Path(__file__).parent
 
 
 def frontend_init(app : FastAPI):
-    app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+    # app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
     # 模板配置
     templates = Jinja2Templates(directory=BASE_DIR)
 
