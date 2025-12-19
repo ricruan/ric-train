@@ -1,4 +1,7 @@
-from Wolin.api.coreApi import router as interview_router
-from main import app
+from fastapi import FastAPI
 
-app.include_router(interview_router, prefix="/interview", tags=["Interview"])
+from Wolin.api.coreApi import router as core_router
+
+
+def init_router(app: FastAPI):
+    app.include_router(core_router, prefix="/interview", tags=["Interview"])

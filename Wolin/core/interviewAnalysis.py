@@ -17,7 +17,7 @@ from RicUtils.decoratorUtils import after_exec_4c, after_exec_4c_no_params
 from RicUtils.docUtils import generate_doc_with_jinja
 from RicUtils.pdfUtils import extract_pdf_text
 from RicUtils.redisUtils import cache_with_params
-from Service.emailService import EmailService
+from Wolin.service.emailService import EmailService
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
     CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, \
     RESUME_JSON_EXTRACT_PROMPT, RESUME_ANALYSIS_PROMPT
@@ -149,6 +149,7 @@ class InterviewAnalysis:
         self.context_params['analysis_end'] = result
         return result
 
+    # TODO 移动到 email Service中去
     def _send_email(self):
         """
         发送邮件

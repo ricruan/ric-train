@@ -1,7 +1,7 @@
 import logging
 
 from RicUtils.config.logConfig import setup_logging
-from router.wolinRouter import init_router
+from Wolin.router.router import init_router
 
 # 日志配置初始化
 setup_logging()
