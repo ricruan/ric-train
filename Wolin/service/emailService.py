@@ -3,9 +3,12 @@ import os
 from dotenv import load_dotenv
 
 from Client.emailClient import send_email
-
+from RicUtils.dateUtils import get_current_date
+from Wolin.service.base import service_logger
 
 load_dotenv()
+
+logger = service_logger
 
 class EmailService:
 
@@ -16,13 +19,13 @@ class EmailService:
 
 
 
-    def send_emails_ric(self,
-                        subject:str,
-                        email_content:str,
-                        receiver_emails: list[str] = None,
-                        is_html:bool=False,
-                        attachments= None,
-                        inline_images=None):
+    def send_emails_base(self,
+                         subject:str,
+                         email_content:str,
+                         receiver_emails: list[str] = None,
+                         is_html:bool=False,
+                         attachments= None,
+                         inline_images=None):
         """
         发送邮件
         :param subject: 邮件标题
@@ -41,9 +44,39 @@ class EmailService:
                    attachments=attachments,
                    inline_images=inline_images)
 
+    def send_emails_4_ia(self,
+                         user_name: str,
+                         ia_id: str,
+                         report_path: str,
+                         user_email: list[str] | str,
+                         ):
+        name = user_name or '小伙伴'
+        content = \
+            f"""
+                <html>
+                <body>
+                    <p><img src="cid:wolin" ></p>
+                    <h1>{name},你好！</h1>
+                    <p>这是一封由<b>沃林数智</b>发送的面试报告邮件（ID：{ia_id}）,请查收附件.</p>
+                    <p>祝你今天愉快！</p>
+                </body>
+                </html>
+            """
+        try:
+            self.send_emails_base(
+                subject=f"面试报告 {get_current_date()}",
+                email_content=content,
+                receiver_emails=user_email,
+                is_html=True,
+                attachments=report_path,
+                inline_images=[("Wolin/static/wolin.jpg", "wolin")]
+            )
+            logger.info(f"邮件发送成功！ Receives_Email:{user_email}")
+        except Exception as e:
+            logger.error(f"邮件发送异常:{e}")
 
-
+email_service = EmailService()
 
 if __name__ == '__main__':
-    email_service = EmailService()
-    email_service.send_emails_ric(subject='❤情书❤' ,email_content="测试邮件")
+
+    email_service.send_emails_base(subject='❤情书❤', email_content="测试邮件")

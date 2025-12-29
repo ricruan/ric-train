@@ -1,5 +1,7 @@
 import tempfile
 import os
+from typing import Callable, Any
+
 from fastapi import UploadFile
 
 
@@ -41,3 +43,26 @@ async def save_upload_file_to_temp(
             temp_file_path = tmp_file.name
 
     return temp_file_path
+
+
+def str_list_2_temp_file(strs: list[str],func: Callable[[str], Any]):
+    """
+    字符串数组转化为临时文件， 用完记得手动删
+    :param strs: 待写成文件的字符串数组
+    :param func: 对临时文件操作的函数
+    :return:
+    """
+    temp_file_path = None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as tmp_file:
+            # 写入每行（添加换行符）
+            for line in strs:
+                tmp_file.write(line + '\n')
+
+            # 刷新确保内容写入磁盘（某些场景需要）
+            tmp_file.flush()
+            temp_file_path = tmp_file.name
+        return func(temp_file_path)
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)

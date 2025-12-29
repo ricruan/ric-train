@@ -268,6 +268,7 @@ class MinioAsyncClient(MinioClient):
 
 
 default_minio_client = MinioClient()
+async_minio_client = MinioAsyncClient()
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

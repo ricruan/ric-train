@@ -17,6 +17,7 @@ from RicUtils.decoratorUtils import after_exec_4c, after_exec_4c_no_params
 from RicUtils.docUtils import generate_doc_with_jinja
 from RicUtils.pdfUtils import extract_pdf_text
 from RicUtils.redisUtils import cache_with_params
+from Wolin.service.allPublic import get_email_service
 from Wolin.service.emailService import EmailService
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
     CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, \
@@ -49,6 +50,7 @@ class InterviewAnalysis:
                  receive_email: str = '',
                  user_name: str = '',
                  company_name: str = ''):
+        # TODO 替换成state
         self.audio_duration = None # 音频时长
         self.context_params = {    # 模板上下文
             "resume_info": {       # 简历信息
@@ -149,37 +151,17 @@ class InterviewAnalysis:
         self.context_params['analysis_end'] = result
         return result
 
-    # TODO 移动到 email Service中去
     def _send_email(self):
         """
         发送邮件
         :return:
         """
-        name = self.get_username or '小伙伴'
-        content = \
-        f"""
-        <html>
-        <body>
-            <p><img src="cid:wolin" ></p>
-            <h1>{name},你好！</h1>
-            <p>这是一封由<b>沃林数智</b>发送的面试报告邮件（ID：{self.uuid}）,请查收附件.</p>
-            <p>祝你今天愉快！</p>
-        </body>
-        </html>
-        """
-
-        try:
-            InterviewAnalysis.email_service.send_emails_ric(
-                subject=f"面试报告 {get_current_date()}",
-                email_content=content,
-                receiver_emails=self.user_email,
-                is_html=True,
-                attachments=self.report_path,
-                inline_images=[("Wolin/static/wolin.jpg", "wolin")]
-            )
-            logger.info(f"邮件发送成功！ Receives_Email:{self.user_email}")
-        except Exception as e:
-            logger.error(f"邮件发送异常:{e}")
+        get_email_service().send_emails_4_ia(
+            user_name=self.user_email,
+            ia_id=self.uuid,
+            report_path=self.report_path,
+            user_email=self.user_email
+        )
 
 
     @after_exec_4c_no_params(_update_redis_temp_report)
