@@ -24,8 +24,8 @@ def ci_auditing_text_submit():
     }
     response = client.ci_auditing_text_submit(
         Bucket=os.getenv("TC_BUCKET_NAME"),  # 桶名称
-        Content='123456test操你妈'.encode("utf-8"),  # 需要审核的文本内容
-        BizType='',  # 表示审核策略的唯一标识
+        Content='123456test'.encode("utf-8"),  # 需要审核的文本内容
+        # BizType='',  # 表示审核策略的唯一标识
         # UserInfo=user_info,  # 用户自定义业务字段
         # DataId='456456456',  # 待审核的数据进行唯一业务标识
     )
