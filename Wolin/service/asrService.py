@@ -1,24 +1,32 @@
-from Client.allPublic import get_asr_client
+import os
+
+from Client import get_asr_client, get_minio_client
 from Wolin.service.base import service_logger
 
 logger = service_logger
 
 class AsrService:
-    client = get_asr_client()
+    asr_client = get_asr_client()
+    minio_client = get_minio_client()
 
-    def audio_2_text_handle(self, file_path: str | list[str], max_workers: int = 50):
+    def audio_2_text_handle(self, file_path: str | list[str], max_workers: int = 50, minio_object_name:str = None):
         """
         使用线程池并发运行 ASR 函数，并保持原始顺序
 
         Args:
             file_path: 单个文件路径或文件路径列表
             max_workers: 最大并发线程数
-
+            minio_object_name: MinIO object Name
         Returns:
             List[str]: 按原始顺序排列的 ASR 结果列表
         """
-        ordered_results = self.client.audio_2_text(file_path=file_path,max_workers=max_workers)
+        ordered_results = self.asr_client.audio_2_text(file_path=file_path,max_workers=max_workers)
 
+        bucket_name = os.getenv("MINIO_ASR_TEXT_BUCKET_NAME")
+        if bucket_name and minio_object_name:
+            self.minio_client.str_list_2_minio(str_list=ordered_results,
+                                               bucket_name=bucket_name,
+                                               object_name=minio_object_name)
         # temp_file_path = ''
         # with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as tmp_file:
         #     # 写入每行（添加换行符）
@@ -34,6 +42,8 @@ class AsrService:
         #                           file_path=temp_file_path)
         #
         # os.unlink(temp_file_path)
+
+        return  ordered_results
 
 
 

@@ -17,7 +17,7 @@ from RicUtils.decoratorUtils import after_exec_4c, after_exec_4c_no_params
 from RicUtils.docUtils import generate_doc_with_jinja
 from RicUtils.pdfUtils import extract_pdf_text
 from RicUtils.redisUtils import cache_with_params
-from Wolin.service.allPublic import get_email_service
+from Wolin.service import get_email_service
 from Wolin.service.emailService import EmailService
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
     CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, \
@@ -157,7 +157,7 @@ class InterviewAnalysis:
         :return:
         """
         get_email_service().send_emails_4_ia(
-            user_name=self.user_email,
+            user_name=self.get_username,
             ia_id=self.uuid,
             report_path=self.report_path,
             user_email=self.user_email

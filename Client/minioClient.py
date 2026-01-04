@@ -1,5 +1,7 @@
 import logging
 import os
+import tempfile
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed, Future
 from datetime import timedelta
 from minio import Minio
@@ -9,6 +11,7 @@ from typing import List, Tuple, Dict
 from Meta.singletonMeta import SingletonMeta
 
 logger = logging.getLogger(__name__)
+
 
 class MinioClient(metaclass=SingletonMeta):
 
@@ -172,6 +175,26 @@ class MinioClient(metaclass=SingletonMeta):
             logger.error(f"[!] 获取对象信息失败: {e}")
             return None
 
+    def str_list_2_minio(self, str_list: list[str], bucket_name: str, object_name: str):
+        """
+        write the str_list to minIO
+        """
+        temp_file_path = ''
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as tmp_file:
+            # 写入每行（添加换行符）
+            for line in str_list:
+                tmp_file.write(line + '\n')
+
+            # 刷新确保内容写入磁盘（某些场景需要）
+            tmp_file.flush()
+            temp_file_path = tmp_file.name
+
+        self.upload_file(bucket_name=bucket_name,
+                         object_name=object_name,
+                         file_path=temp_file_path)
+
+        os.unlink(temp_file_path)
+
 
 class MinioAsyncClient(MinioClient):
     """
@@ -247,7 +270,7 @@ class MinioAsyncClient(MinioClient):
         """
         辅助方法：阻塞等待一组 Future 完成并返回结果
         """
-        if isinstance(futures,Future):
+        if isinstance(futures, Future):
             futures = [futures]
         results = []
         for future in as_completed(futures):
@@ -265,6 +288,15 @@ class MinioAsyncClient(MinioClient):
         if hasattr(self, 'executor'):
             self.executor.shutdown(wait=wait)
             logger.info("[*] 线程池已关闭")
+
+    def str_list_2_minio(self, str_list: list[str], bucket_name: str, object_name: str):
+        """
+        write the str_list to minIO
+        """
+        def super_func():
+            super().str_list_2_minio(str_list=str_list,bucket_name=bucket_name,object_name=object_name)
+
+        threading.Thread(target=super_func).start()
 
 
 default_minio_client = MinioClient()
@@ -307,9 +339,6 @@ if __name__ == '__main__':
     print(1)
     print(res)
     print(2)
-
-
-
 
     # 6. 列出桶内文件
     # objects = minio_client.list_objects(BUCKET_NAME)
