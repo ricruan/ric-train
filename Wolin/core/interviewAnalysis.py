@@ -2,7 +2,6 @@ import json
 import logging
 import concurrent.futures
 import os
-import tempfile
 import threading
 import uuid
 from typing import List, Tuple, Any
@@ -17,7 +16,7 @@ from RicUtils.decoratorUtils import after_exec_4c, after_exec_4c_no_params
 from RicUtils.docUtils import generate_doc_with_jinja
 from RicUtils.pdfUtils import extract_pdf_text
 from RicUtils.redisUtils import cache_with_params
-from Wolin.service import get_email_service
+from Wolin.service import get_email_service, get_asr_service, get_minio_service
 from Wolin.service.emailService import EmailService
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
     CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, \
@@ -39,6 +38,8 @@ def init_temp_reports():
 
 class InterviewAnalysis:
     asr_client = AsrClient()
+    asr_service = get_asr_service()
+    minio_service = get_minio_service()
     file_handler = AudioFileHandler()
     redis_client = RedisClient()
     email_service = EmailService(receiver_emails=['2366692214@qq.com'])
@@ -281,6 +282,9 @@ class InterviewAnalysis:
         if self.resume_file:
             self.read_resume(file_path=self.resume_file)
         self.content = self._split_audio_combine_2_text(file_path=file_path or self.origin_audio_file)
+        object_name = f'{self.get_username}/{self.company_name or get_current_date()}.txt'
+        InterviewAnalysis.minio_service.save_audio_text_by_str_list(ordered_results=[self.content],
+                                                                    minio_object_name=object_name)
         self._work_flow()
         self._generate_report()
         return self.content
@@ -321,73 +325,11 @@ class InterviewAnalysis:
         Args:
             file_path: 单个文件路径或文件路径列表
             max_workers: 最大并发线程数
-            
         Returns:
             List[str]: 按原始顺序排列的 ASR 结果列表
         """
-        if isinstance(file_path, str):
-            file_path = [file_path]
 
-        # 如果只有一个文件，直接处理
-        if len(file_path) == 1:
-            return [self.asr_client.asr(audio_file_path=file_path[0], extract_response=True)]
-
-        # 创建任务列表：(索引, 文件路径)
-        tasks_with_index = [(index, file) for index, file in enumerate(file_path)]
-
-        def process_single_audio(task_data: Tuple[int, str]) -> Tuple[int, Any]:
-            """处理单个音频文件，返回 (原始索引, ASR结果)"""
-            index, audio_file = task_data
-            try:
-                asr_result = self.asr_client.asr(audio_file_path=audio_file, extract_response=True)
-                return index, asr_result
-            except Exception as asr_error:
-                logging.error(f"处理文件 {audio_file} 时出错: {asr_error}")
-                return index, f"处理失败: {str(asr_error)}"
-
-        # 使用线程池并发处理
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # 提交所有任务
-            future_to_index = {
-                executor.submit(process_single_audio, task): task[0]
-                for task in tasks_with_index
-            }
-
-            # 收集结果
-            results_with_index = []
-            for future in concurrent.futures.as_completed(future_to_index):
-                try:
-                    index, result = future.result()
-                    results_with_index.append((index, result))
-                    logging.info(f"完成处理文件索引 {index}")
-                except Exception as e:
-                    original_index = future_to_index[future]
-                    logging.error(f"获取文件索引 {original_index} 的结果时出错: {e}")
-                    results_with_index.append((original_index, f"获取结果失败: {str(e)}"))
-
-        # 按原始索引排序，恢复顺序
-        results_with_index.sort(key=lambda x: x[0])
-
-        # 提取结果，去除索引
-        ordered_results = [result for index, result in results_with_index]
-
-        temp_file_path = ''
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt',delete=False, encoding='utf-8') as tmp_file:
-            # 写入每行（添加换行符）
-            for line in ordered_results:
-                tmp_file.write(line + '\n')
-
-            # 刷新确保内容写入磁盘（某些场景需要）
-            tmp_file.flush()
-            temp_file_path = tmp_file.name
-
-        MinioClient().upload_file(bucket_name="audio-text",
-                                  object_name=f'{self.get_username}/{self.company_name or get_current_date()}.txt',
-                                  file_path=temp_file_path)
-
-        os.unlink(temp_file_path)
-
-        logging.info(f"并发处理完成，共处理 {len(ordered_results)} 个文件")
+        ordered_results = InterviewAnalysis.asr_service.audio_2_text_handle(file_path=file_path,max_workers=max_workers)
         return ordered_results
 
     @staticmethod

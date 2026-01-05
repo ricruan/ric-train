@@ -294,7 +294,7 @@ class MinioAsyncClient(MinioClient):
         write the str_list to minIO
         """
         def super_func():
-            super().str_list_2_minio(str_list=str_list,bucket_name=bucket_name,object_name=object_name)
+            MinioClient.str_list_2_minio(self=self,str_list=str_list,bucket_name=bucket_name,object_name=object_name)
 
         threading.Thread(target=super_func).start()
 
