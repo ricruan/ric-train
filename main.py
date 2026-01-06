@@ -7,12 +7,9 @@ from fastapi import FastAPI, Body
 
 from Client.mysqlClient import MySQLClient
 
-from Wolin.api.coreApi import router as interview_router
 
 app = FastAPI()
 
-
-app.include_router(interview_router, prefix="/interview", tags=["Interview"])
 
 
 @app.post("/execute_sql")

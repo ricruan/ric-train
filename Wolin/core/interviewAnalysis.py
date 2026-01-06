@@ -37,7 +37,6 @@ def init_temp_reports():
 
 
 class InterviewAnalysis:
-    asr_client = AsrClient()
     asr_service = get_asr_service()
     minio_service = get_minio_service()
     file_handler = AudioFileHandler()
@@ -318,7 +317,8 @@ class InterviewAnalysis:
         resume_analysis = ez_llm(sys_msg=RESUME_ANALYSIS_PROMPT, usr_msg=str(self.context_params['resume_info']))
         self.context_params['resume_analysis'] = resume_analysis
 
-    def audio_2_text(self, file_path: str | list[str], max_workers: int = 50):
+    @staticmethod
+    def audio_2_text(file_path: str | list[str], max_workers: int = 50):
         """
         使用线程池并发运行 ASR 函数，并保持原始顺序
         
