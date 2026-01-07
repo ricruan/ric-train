@@ -1,4 +1,4 @@
-from Client import get_asr_client
+from Base.Client import get_asr_client
 from Wolin.service.base import service_logger
 
 logger = service_logger

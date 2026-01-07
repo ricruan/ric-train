@@ -2,8 +2,8 @@ import os
 
 from dotenv import load_dotenv
 
-from Client.emailClient import send_email
-from RicUtils.dateUtils import get_current_date
+from Base.Client.emailClient import send_email
+from Base.RicUtils.dateUtils import get_current_date
 from Wolin.service.base import service_logger
 
 load_dotenv()

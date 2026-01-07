@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
-from Client.minioClient import MinioAsyncClient
-from RicUtils.decoratorUtils import EarlyStop, params_handle_4c
+from Base.Client.minioClient import MinioAsyncClient
+from Base.RicUtils.decoratorUtils import EarlyStop, params_handle_4c
 from Wolin.core.interviewAnalysis import InterviewAnalysis
 
 logger = logging.getLogger(__name__)

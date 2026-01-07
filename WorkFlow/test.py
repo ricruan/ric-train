@@ -1,8 +1,8 @@
-import inspect
 
-import text
-from RicUtils.reflectUtils import get_sign_func_from_module
 
-graph_node_mapping = get_sign_func_from_module(sign='_is_graph_node',module=text)
+def test_addition():
+    assert 2 + 2 == 4
 
+def test_subtraction():
+    assert 5 - 3 == 1
 

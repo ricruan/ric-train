@@ -7,8 +7,8 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, UploadFile, File, Form, Response
 
-from RicUtils.fileUtils import save_upload_file_to_temp
-from RicUtils.httpUtils import HttpResponse
+from Base.RicUtils.fileUtils import save_upload_file_to_temp
+from Base.RicUtils.httpUtils import HttpResponse
 from Wolin.core.interviewAnalysis import InterviewAnalysis
 from Wolin.service.interviewService import InterviewAnalysisService
 

@@ -1,21 +1,19 @@
 import json
 import logging
-import concurrent.futures
 import os
 import threading
 import uuid
-from typing import List, Tuple, Any
-from Client.asrClient import AsrClient
-from Client.minioClient import MinioClient
-from Client.qwen import ez_llm
-from Client.redisClient import RedisClient
-from RicUtils.audioFileUtils import AudioFileHandler
-from RicUtils.dataUtils import short_unique_hash
-from RicUtils.dateUtils import get_current_date
-from RicUtils.decoratorUtils import after_exec_4c, after_exec_4c_no_params
-from RicUtils.docUtils import generate_doc_with_jinja
-from RicUtils.pdfUtils import extract_pdf_text
-from RicUtils.redisUtils import cache_with_params
+from typing import List
+from Base.Client.minioClient import MinioClient
+from Base.Client.qwen import ez_llm
+from Base.Client.redisClient import RedisClient
+from Base.RicUtils.audioFileUtils import AudioFileHandler
+from Base.RicUtils.dataUtils import short_unique_hash
+from Base.RicUtils.dateUtils import get_current_date
+from Base.RicUtils.decoratorUtils import after_exec_4c, after_exec_4c_no_params
+from Base.RicUtils.docUtils import generate_doc_with_jinja
+from Base.RicUtils.pdfUtils import extract_pdf_text
+from Base.RicUtils.redisUtils import cache_with_params
 from Wolin.service import get_email_service, get_asr_service, get_minio_service
 from Wolin.service.emailService import EmailService
 from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \

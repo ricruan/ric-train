@@ -20,11 +20,13 @@ class BaseWorkFlow:
     def _init_node(self):
         self._init_work_flow()
 
-        for i in self.node_list:
+        for i in set(self.node_list):
             if isinstance(i, str):
                 self.work_flow.add_node(i, graph_node_mapping[i])
 
     def _init_edge(self):
+        if not self.node_list:
+            return
         self.work_flow.add_edge(START, self.node_list[0])
         self.work_flow.add_edge(self.node_list[-1], END)
         for i in self.node_list[:-1]:
@@ -39,7 +41,7 @@ class BaseWorkFlow:
 
 
 if __name__ == "__main__":
-    state = BaseState(id='123')
+    state = BaseState(name='123')
     test = BaseWorkFlow(node_list=['say_hello', 'say_bye'])
     test.invoke(input_data=state)
     print(test.work_flow)

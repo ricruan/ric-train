@@ -1,5 +1,5 @@
 import os
-from Client import get_minio_client
+from Base.Client import get_minio_client
 
 
 class MinIOService:
