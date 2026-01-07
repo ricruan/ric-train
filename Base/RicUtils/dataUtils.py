@@ -1,7 +1,7 @@
 import hashlib
 import base64
 import string
-
+from typing import Any, Dict
 # Base62 字符集（数字 + 大小写字母）
 BASE62 = string.digits + string.ascii_letters
 
@@ -44,3 +44,14 @@ def short_unique_hash(input_str: str, length: int = 10) -> str:
     return base62_str[:length].ljust(length, '0')  # 若太短则补0（理论上不会）
 
 
+def calculate_diff_dict(old_data: Dict[str, Any], new_data: Dict[str, Any]) -> Dict[str, Any]:
+    """辅助函数：对比两个字典，返回变更的部分"""
+    diff = {}
+    for key, new_value in new_data.items():
+        # 1. 如果 key 不在旧数据中，说明是新增字段
+        if key not in old_data:
+            diff[key] = new_value
+        # 2. 如果 key 存在但值不相等，说明被修改
+        elif old_data[key] != new_value:
+            diff[key] = new_value
+    return diff
