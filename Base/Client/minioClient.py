@@ -8,7 +8,7 @@ from minio import Minio
 from minio.error import S3Error
 from typing import List, Tuple, Dict
 
-from Meta.singletonMeta import SingletonMeta
+from Base.Meta.singletonMeta import SingletonMeta
 
 logger = logging.getLogger(__name__)
 

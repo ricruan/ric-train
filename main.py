@@ -1,11 +1,11 @@
 import logging
-from RicUtils.config.logConfig import setup_logging
+from Base.RicUtils.config.logConfig import setup_logging
 # 日志配置初始化
 setup_logging()
 
 from fastapi import FastAPI, Body
 
-from Client.mysqlClient import MySQLClient
+from Base.Client.mysqlClient import MySQLClient
 
 
 app = FastAPI()

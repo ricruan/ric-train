@@ -3,7 +3,7 @@ import os
 import subprocess
 import tempfile
 import uuid
-from RicUtils.decoratorUtils import  after_exec_4c, params_handle_4c
+from Base.RicUtils.decoratorUtils import  after_exec_4c, params_handle_4c
 
 logger = logging.getLogger(__name__)
 FFMPEG_PATH = rf"{os.getenv('FFMPEG_PATH')}"

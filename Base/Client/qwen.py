@@ -18,6 +18,7 @@ client = OpenAI(
 
 
 chatLLM = ChatTongyi(
+    model="qwen3-max",
     streaming=True,
     api_key= os.getenv("DASHSCOPE_API_KEY")
 )
@@ -58,7 +59,7 @@ def ez_llm(sys_msg: str, usr_msg: str):
 if __name__ == '__main__':
     # res = chatLLM.invoke([HumanMessage(content="hi")])
     # print(res.content)
-    res = ez_llm(sys_msg="you are a helpful ai assistant：\n",usr_msg='你好,给我讲个地狱笑话')
+    res = ez_invoke(sys_msg="you are a helpful ai assistant：\n",usr_msg='你好,给我讲个地狱笑话')
     print(res)
     # res = chatLLM.stream([HumanMessage(content="1 + 1 = ?")])
     # for r in res:

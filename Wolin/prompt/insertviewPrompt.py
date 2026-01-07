@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from Client.qwen import ez_llm
+from Base.Client.qwen import ez_llm
 from jinja2 import Template
 
 COMBINE_SLICE="""

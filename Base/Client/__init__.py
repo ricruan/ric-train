@@ -1,5 +1,5 @@
-from Client.asrClient import asr_client
-from Client.minioClient import async_minio_client, default_minio_client
+from Base.Client.asrClient import asr_client
+from Base.Client.minioClient import async_minio_client, default_minio_client
 
 
 def get_asr_client():
