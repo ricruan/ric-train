@@ -16,7 +16,7 @@ def say_bye(state: BaseState):
 
 @graph_node
 def say_1(state: BaseState):
-    print(1)
+    print("12323231 v111111")
 
 @graph_node
 def say_2(state: BaseState):

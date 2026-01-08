@@ -3,7 +3,7 @@ from WorkFlow.baseState import BaseState
 
 
 @graph_node
-def none_node(state: BaseState):
+def _(state: BaseState):
     """
     空节点
     :param state:

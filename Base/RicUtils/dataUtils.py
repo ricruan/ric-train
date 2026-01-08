@@ -55,3 +55,17 @@ def calculate_diff_dict(old_data: Dict[str, Any], new_data: Dict[str, Any]) -> D
         elif old_data[key] != new_value:
             diff[key] = new_value
     return diff
+
+
+def seq_safe_get(seq : list|tuple, index: int, default = None):
+    """
+    防下标越界安全取值
+    :param seq: 序列
+    :param index:
+    :param default:
+    :return:
+    """
+    try:
+        return seq[index]
+    except IndexError:
+        return default

@@ -8,6 +8,55 @@ import os
 load_dotenv()
 
 
+class ColoredFormatter(logging.Formatter):
+    """带颜色的日志格式化器"""
+
+    # ANSI颜色代码
+    COLORS = {
+        'DEBUG': '\033[36m',      # 青色
+        'INFO': '\033[32m',       # 绿色
+        'WARNING': '\033[33m',    # 黄色
+        'ERROR': '\033[31m',      # 红色
+        'CRITICAL': '\033[35m',   # 紫色
+    }
+
+    # 重置颜色代码
+    RESET = '\033[0m'
+
+    def __init__(self, fmt=None, datefmt=None, use_color=True):
+        """初始化格式化器
+
+        Args:
+            fmt: 日志格式字符串
+            datefmt: 日期格式字符串
+            use_color: 是否使用颜色
+        """
+        super().__init__(fmt, datefmt)
+        self.use_color = use_color
+
+    def format(self, record):
+        """格式化日志记录
+
+        Args:
+            record: 日志记录对象
+
+        Returns:
+            格式化后的日志字符串
+        """
+        # 调用父类的format方法获取基本格式
+        log_message = super().format(record)
+
+        # 如果启用颜色且输出到控制台，则添加颜色
+        if self.use_color and hasattr(record, 'levelname'):
+            levelname = record.levelname
+            color = self.COLORS.get(levelname, '')
+            if color:
+                # 为整个日志消息添加颜色
+                log_message = color + log_message + self.RESET
+
+        return log_message
+
+
 def get_log_level_from_env():
     """
     从环境变量中获取日志级别设置
@@ -52,13 +101,20 @@ def setup_logging():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
+    # 创建带颜色的日志格式化器（仅用于控制台输出）
+    colored_format = ColoredFormatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        use_color=True
+    )
+
     # 从环境变量获取日志级别
     log_level = get_log_level_from_env()
     root_logger.setLevel(log_level)
 
-    # 添加控制台处理器
+    # 添加控制台处理器（使用带颜色的格式化器）
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(log_format)
+    console_handler.setFormatter(colored_format)
     root_logger.addHandler(console_handler)
 
     # 添加按天轮转的文件处理器

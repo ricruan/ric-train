@@ -1,3 +1,4 @@
+import logging
 import os
 
 import redis
@@ -5,6 +6,7 @@ import threading
 from typing import Optional, List, Generator
 from dotenv import load_dotenv
 
+logger = logging.getLogger(__name__)
 load_dotenv()
 
 # 读取 Redis 配置
@@ -64,8 +66,9 @@ class RedisClient:
             )
             # 创建客户端实例
             self.client = redis.Redis(connection_pool=self.connection_pool)
-            self._initialized = True
-            print(f"RedisClient 单例已初始化，连接到 {self.host}:{self.port}")
+            if self.ping():
+                self._initialized = True
+                logger.error(f"RedisClient 单例已初始化，连接到 {self.host}:{self.port}")
 
     def set(self, key: str, value: str, ex: int = None) -> bool:
         """
@@ -91,7 +94,7 @@ class RedisClient:
         try:
             return self.client.get(key)
         except redis.RedisError as e:
-            print(f"获取键 {key} 失败: {e}")
+            logger.error(f"获取键 {key} 失败: {e}")
             return None
 
     def delete(self, key: str) -> bool:
@@ -104,7 +107,7 @@ class RedisClient:
             count = self.client.delete(key)
             return count > 0
         except redis.RedisError as e:
-            print(f"删除键 {key} 失败: {e}")
+            logger.error(f"删除键 {key} 失败: {e}")
             return False
 
     def update(self, key: str, value: str, ex: int = None) -> bool:
@@ -129,7 +132,7 @@ class RedisClient:
             # 使用 decode_responses=True 时，返回的是字符串列表
             return self.client.keys(pattern)
         except redis.RedisError as e:
-            print(f"模糊查询键 {pattern} 失败: {e}")
+            logger.error(f"模糊查询键 {pattern} 失败: {e}")
             return []
 
     def scan_keys_generator(self, match: str = "*", count: int = 10) -> Generator[str|bytes, None, None]:
@@ -168,7 +171,7 @@ class RedisClient:
                 return sum(results)
             return 0
         except redis.RedisError as e:
-            print(f"模糊删除键 {pattern} 失败: {e}")
+            logger.error(f"模糊删除键 {pattern} 失败: {e}")
             return 0
 
     def fuzzy_delete_safe(self, match: str = "*", count: int = 10) -> int:
@@ -193,7 +196,7 @@ class RedisClient:
             if deleted_count > 0:
                 pipe.execute()
         except redis.RedisError as e:
-            print(f"安全模糊删除键 {match} 失败: {e}")
+            logger.error(f"安全模糊删除键 {match} 失败: {e}")
             # 如果出错，可能需要手动检查状态
         return deleted_count
 
@@ -205,7 +208,7 @@ class RedisClient:
         try:
             return self.client.ping()
         except redis.RedisError as e:
-            print(f"Ping Redis 失败: {e}")
+            logger.error(f"Ping Redis 失败: {e}")
             return False
 
 # --- 使用示例 ---

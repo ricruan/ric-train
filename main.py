@@ -1,4 +1,3 @@
-import logging
 from Base.RicUtils.config.logConfig import setup_logging
 # 日志配置初始化
 setup_logging()

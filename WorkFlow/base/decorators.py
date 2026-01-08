@@ -33,3 +33,14 @@ def graph_node(func):
     wrapper._is_graph_node = True
 
     return wrapper
+
+
+def edge_condition(func):
+    func._is_edge_condition = True
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    wrapper._is_edge_condition = True
+    return wrapper
