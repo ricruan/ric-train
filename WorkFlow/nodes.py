@@ -10,3 +10,12 @@ def _(state: BaseState):
     :return:
     """
     pass
+
+@graph_node
+def continue_node(state: BaseState):
+    """
+    空节点
+    :param state:
+    :return:
+    """
+    pass

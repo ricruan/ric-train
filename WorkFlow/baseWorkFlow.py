@@ -46,7 +46,8 @@ class BaseWorkFlow:
                 _map = seq_safe_get(i,2)
                 if not _map:
                     tmp = list(i)
-                    tmp.append({item:item for item in _next})
+                    tem_next = [_next] if isinstance(_next,str) else _next
+                    tmp.append({item:item for item in tem_next})
                     self.node_list[index] = tuple(tmp)
                 if _map and isinstance(_map,dict) and set(_map.values()) != set(_next):
                     self.node_list.insert(index+1,list(_map.values()) )
@@ -114,6 +115,8 @@ class BaseWorkFlow:
                 item_child_nodes = seq_safe_get(item,2)
                 if isinstance(item_child_nodes,dict):
                     need_register_node.extend(item_child_nodes.values())
+                elif isinstance(item_child_nodes,list):
+                    need_register_node.extend(item_child_nodes)
                 for node in need_register_node:
                     _register_unique_node(node,soft_register=True)
                 rewrite_node_list.append(item)
@@ -135,12 +138,14 @@ class BaseWorkFlow:
 
         def handle_conditional_edge(current_node,next_layer_nodes):
             try:
+                # TODO 完善一下
+                base_list = [END]
                 route_map = {**seq_safe_get(current_node, 2, {}), **{item: item for item in next_layer_nodes}}
                 if isinstance(current_node, tuple):
                     self.work_flow.add_conditional_edges(
                         seq_safe_get(current_node, 0),
                         edge_condition_mapping.get(seq_safe_get(current_node, 1)),
-                        route_map
+                        base_list.extend(route_map.values())
                     )
             except Exception as e:
                 raise WorkFlowBaseException("构建 Conditional Edge 时发生异常：" + str(e))

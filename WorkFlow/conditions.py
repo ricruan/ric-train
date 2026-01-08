@@ -1,10 +1,10 @@
 from WorkFlow.base.decorators import edge_condition
 from WorkFlow.baseState import BaseState
-
+from langgraph.graph import END
 
 @edge_condition
 def early_stop(state: BaseState):
     if state.early_stop_flag:
-        return "__end__"
+        return END
     else:
-        return "say_1"
+        return "continue_node"

@@ -12,6 +12,7 @@ def say_hello(state: BaseState):
 @graph_node
 def say_bye(state: BaseState):
     state.name = 'bye-bye'
+    # state.early_stop_flag = True
     print('bye_bye')
 
 @graph_node
