@@ -7,4 +7,4 @@ def early_stop(state: BaseState):
     if state.early_stop_flag:
         return "__end__"
     else:
-        return "continue_node"
+        return "say_1"

@@ -44,8 +44,12 @@ class BaseWorkFlow:
             # conditional_edge tuple 如果下一层节点和map不一致，自动拓展一层
             if isinstance(i,tuple):
                 _map = seq_safe_get(i,2)
+                if not _map:
+                    tmp = list(i)
+                    tmp.append({item:item for item in _next})
+                    self.node_list[index] = tuple(tmp)
                 if _map and isinstance(_map,dict) and set(_map.values()) != set(_next):
-                    self.node_list.insert(index+1,list(_map.values()))
+                    self.node_list.insert(index+1,list(_map.values()) )
                     index += 1
             index += 1
 
@@ -185,5 +189,5 @@ class BaseWorkFlow:
 
 if __name__ == "__main__":
     state = BaseState(name='123')
-    test = BaseWorkFlow(node_list=['say_hello', ('say_bye','early_stop',{'continue_node':'say_1'}),['say_1','say_2','say_3'],['say_2','say_3'],'say_4','say_hello'])
+    test = BaseWorkFlow(node_list=['say_hello', ('say_bye','early_stop'),['say_1','say_2','say_3'],['say_2','say_3'],'say_4','say_hello'])
     test.invoke(input_data=state)
