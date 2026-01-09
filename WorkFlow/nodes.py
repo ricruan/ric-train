@@ -2,7 +2,7 @@ from WorkFlow.base.decorators import graph_node
 from WorkFlow.baseState import BaseState
 
 
-@graph_node
+@graph_node(is_default=True)
 def _(state: BaseState):
     """
     空节点
@@ -11,7 +11,7 @@ def _(state: BaseState):
     """
     pass
 
-@graph_node
+@graph_node(is_default=True)
 def continue_node(state: BaseState):
     """
     空节点

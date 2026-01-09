@@ -1,9 +1,10 @@
 import logging
+from typing import Optional
 
 from langgraph.graph import StateGraph, START, END
 
 from Base.RicUtils.dataUtils import seq_safe_get
-from WorkFlow import graph_node_mapping, edge_condition_mapping
+from WorkFlow import graph_node_mapping, edge_condition_mapping, base_graph_node_mapping
 from WorkFlow.baseState import BaseState
 from WorkFlow.exception import WorkFlowBaseException
 
@@ -13,7 +14,7 @@ class BaseWorkFlow:
 
     def __init__(self, node_list=None):
         self._node_list = node_list or []
-        self.work_flow = None
+        self.work_flow: Optional[StateGraph] = None
         self.workflow_client = None
         # ____________________
         self._init()
@@ -27,6 +28,22 @@ class BaseWorkFlow:
     def node_list(self, value):
         self._node_list = value
         self._check_node_list()
+
+
+
+    def add_node(self,node_name: str,node):
+        """
+        封装一下，避免重复注册
+        :param node_name:
+        :param node:
+        :return:
+        """
+        if node_name in self.work_flow.nodes:
+            return
+        self.work_flow.add_node(node_name,node)
+
+    def add_conditional_edges(self,source,path,path_map = None):
+        self.work_flow.add_conditional_edges(source=source,path=path,path_map=path_map)
 
 
     def _check_node_list(self):
@@ -59,8 +76,13 @@ class BaseWorkFlow:
         self._init_edge()
         self.workflow_client = self.work_flow.compile()
 
+    def _init_base_node(self):
+        for k,v in base_graph_node_mapping.items():
+            self.add_node(k,v)
+
     def _init_node(self):
         self._init_work_flow()
+        self._init_base_node()
         self._check_node_list()
         # 用于记录节点基础名称出现的次数
         # 格式示例: {'say_hello': 1, 'check_data': 2}
@@ -89,7 +111,7 @@ class BaseWorkFlow:
 
             # 3. 注册节点：使用【唯一名称】作为 ID，使用【原始名称】对应的函数作为逻辑
             # 注意：LangGraph 允许不同的 Node ID 指向同一个函数对象
-            self.work_flow.add_node(unique_name, graph_node_mapping[base_name])
+            self.add_node(unique_name, graph_node_mapping[base_name])
 
             return unique_name
 

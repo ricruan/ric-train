@@ -5,14 +5,16 @@ from WorkFlow.baseState import BaseState
 from functools import wraps
 
 
-def graph_node(func):
+def graph_node(func=None, *,is_default: bool = False):
     """
     如果节点函数忘记返回 修改内容,Here 会自动对比差异并返回差异部分进行更新
     :param func:
+    :param is_default:
     :return:
     """
-    # 给函数打上标记
-    func._is_graph_node = True
+    if func is None:
+        # 这是一个带参调用的工厂：@graph_node(is_default=True)
+        return lambda f: graph_node(f, is_default=is_default)
 
     @wraps(func)
     def wrapper(*args, **kwargs):
@@ -26,12 +28,10 @@ def graph_node(func):
             return _res
 
         _new_state = BaseState.find_me(*args, **kwargs)
-        return calculate_diff_dict(old_data=dict(_origin_state),new_data=dict(_new_state))
-
-
+        return calculate_diff_dict(old_data=dict(_origin_state), new_data=dict(_new_state))
 
     wrapper._is_graph_node = True
-
+    wrapper._is_default = is_default
     return wrapper
 
 
