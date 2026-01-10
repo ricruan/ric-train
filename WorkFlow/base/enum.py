@@ -7,3 +7,5 @@ class NodeTypeEnum(Enum):
     """ 普通节点 """
     MULTI_NODE = 1
     """ 多节点 """
+    CONDITIONAL_NODE = 2
+    """ 条件节点 """
