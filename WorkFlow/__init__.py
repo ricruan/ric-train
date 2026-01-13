@@ -1,3 +1,4 @@
+from langgraph.graph import StateGraph
 from . import testNodes
 from . import nodes
 from . import conditions
@@ -8,32 +9,40 @@ graph_node_mapping = {}
 base_graph_node_mapping = {}
 edge_condition_mapping = {}
 
-def load_node(module):
+
+def load_node(module, mapping_dict: dict):
     """
     Load Node from module ~
+    :param mapping_dict:
     :param module:
     :return:
     """
-    load_base_node(module)
-    global graph_node_mapping
+    load_base_node(module,base_graph_node_mapping)
     _res = get_sign_func_from_module(sign='_is_graph_node', module=module)
-    graph_node_mapping = {**graph_node_mapping,**_res}
+    mapping_dict.update(_res)
 
-def load_base_node(module):
+
+def load_base_node(module, mapping_dict: dict):
     """
     Load Base Node from module ~
+    :param mapping_dict:
     :param module:
     :return:
     """
-    global base_graph_node_mapping
     _res = get_sign_func_from_module(sign='_is_default', module=module)
-    base_graph_node_mapping = {**base_graph_node_mapping,**_res}
+    mapping_dict.update(_res)
 
-def load_condition(module):
-    global edge_condition_mapping
+
+def init_base_node(work_flow: StateGraph):
+    for k, v in base_graph_node_mapping.items():
+        work_flow.add_node(k, v)
+
+
+def load_condition(module,mapping_dict: dict):
     _res = get_sign_func_from_module(sign='_is_edge_condition', module=module)
-    edge_condition_mapping = {**edge_condition_mapping,**_res}
+    mapping_dict.update(_res)
 
-load_node(testNodes)
-load_node(nodes)
-load_condition(conditions)
+
+load_node(testNodes, graph_node_mapping)
+load_node(nodes, graph_node_mapping)
+load_condition(conditions, edge_condition_mapping)

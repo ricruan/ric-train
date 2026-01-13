@@ -4,9 +4,10 @@ from typing import Optional
 from langgraph.graph import StateGraph, START, END
 
 from Base.RicUtils.dataUtils import seq_safe_get
-from WorkFlow import graph_node_mapping, edge_condition_mapping, base_graph_node_mapping
+from WorkFlow import graph_node_mapping, edge_condition_mapping, base_graph_node_mapping, init_base_node
 from WorkFlow.baseState import BaseState
 from WorkFlow.exception import WorkFlowBaseException
+from WorkFlow.models.nodes.baseNode import BaseNode
 
 logger = logging.getLogger(__name__)
 
@@ -76,13 +77,10 @@ class BaseWorkFlow:
         self._init_edge()
         self.workflow_client = self.work_flow.compile()
 
-    def _init_base_node(self):
-        for k,v in base_graph_node_mapping.items():
-            self.add_node(k,v)
 
     def _init_node(self):
         self._init_work_flow()
-        self._init_base_node()
+        init_base_node(self.work_flow)
         self._check_node_list()
         # 用于记录节点基础名称出现的次数
         # 格式示例: {'say_hello': 1, 'check_data': 2}

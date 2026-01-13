@@ -1,7 +1,10 @@
+from WorkFlow.base.enum import NodeTypeEnum
 from WorkFlow.models.nodes.baseNode import BaseNode
 
 
 class MultiNode(BaseNode):
 
-    def register_node(self, work_flow):
-        pass
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.node_type = NodeTypeEnum.MULTI_NODE
+

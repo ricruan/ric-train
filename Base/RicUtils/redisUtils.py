@@ -5,6 +5,8 @@ import hashlib
 from typing import Any, Optional, Callable
 from functools import wraps
 
+from Base.Client import get_redis_client
+
 logger = logging.getLogger(__name__)
 
 def get_default_client():
@@ -13,8 +15,7 @@ def get_default_client():
     :return:
     """
     try:
-        from Client.redisClient import RedisClient
-        return RedisClient()
+        return get_redis_client()
     except ImportError:
         raise ImportError("无法导入 RedisClient，请提供 redis_client 参数")
 

@@ -29,29 +29,29 @@ async def interview_analysis(
     resume_file_path = None
     if resume_file:
         resume_file_path = await save_upload_file_to_temp(resume_file, use_original_filename=True)
+    try:
+        def run_analysis():
+            try:
+                analysis_instance = InterviewAnalysis(audio_file=audio_file_path,
+                                                      resume_file=resume_file_path,
+                                                      receive_email=receive_email,
+                                                      user_name=user_name,
+                                                      company_name=company_name)
+                service = InterviewAnalysisService(analysis_instance)
+                service.save_origin_file_2_minio()
+                analysis_instance.analysis()
+            except Exception as e:
+                logger.error(f"[后台线程] InterviewAnalysis 发生异常: {e}", stack_info=True)
 
-    def run_analysis():
-        try:
-            analysis_instance = InterviewAnalysis(audio_file=audio_file_path,
-                                                  resume_file=resume_file_path,
-                                                  receive_email=receive_email,
-                                                  user_name=user_name,
-                                                  company_name=company_name)
-            service = InterviewAnalysisService(analysis_instance)
-            service.save_origin_file_2_minio()
-            analysis_instance.analysis()
-        except Exception as e:
-            logger.error(f"[后台线程] InterviewAnalysis 发生异常: {e}", stack_info=True)
-        finally:
-            if audio_file_path and os.path.exists(audio_file_path):
-                os.unlink(audio_file_path)
-            if resume_file_path and os.path.exists(resume_file_path):
-                os.unlink(resume_file_path)
-
-    # 3. 后台启动一个线程运行它（不阻塞当前请求）
-    thread = threading.Thread(target=run_analysis)
-    thread.start()
-    return HttpResponse.ok(msg="正在分析中...")
+        # 3. 后台启动一个线程运行它（不阻塞当前请求）
+        thread = threading.Thread(target=run_analysis)
+        thread.start()
+        return HttpResponse.ok(msg="正在分析中...")
+    finally:
+        if audio_file_path and os.path.exists(audio_file_path):
+            os.unlink(audio_file_path)
+        if resume_file_path and os.path.exists(resume_file_path):
+            os.unlink(resume_file_path)
 
 
 @router.post("audio_2_text")

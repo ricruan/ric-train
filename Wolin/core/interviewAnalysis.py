@@ -6,7 +6,7 @@ import uuid
 from typing import List
 from Base.Client.minioClient import MinioClient
 from Base.Client.qwen import ez_llm
-from Base.Client.redisClient import RedisClient
+from Base.Client import get_redis_client
 from Base.RicUtils.audioFileUtils import AudioFileHandler
 from Base.RicUtils.dataUtils import short_unique_hash
 from Base.RicUtils.dateUtils import get_current_date
@@ -29,7 +29,7 @@ REDIS_TEMP_REPORT_KEY = f"{REDIS_PREFIX}:temp_reports"
 
 def init_temp_reports():
     try:
-        return json.loads(RedisClient().get(REDIS_TEMP_REPORT_KEY))
+        return json.loads(get_redis_client().get(REDIS_TEMP_REPORT_KEY))
     except Exception:
         return {}
 
@@ -38,7 +38,7 @@ class InterviewAnalysis:
     asr_service = get_asr_service()
     minio_service = get_minio_service()
     file_handler = AudioFileHandler()
-    redis_client = RedisClient()
+    redis_client = get_redis_client()
     email_service = EmailService(receiver_emails=['2366692214@qq.com'])
     temp_reports = init_temp_reports() or {}
 

@@ -211,6 +211,9 @@ class RedisClient:
             logger.error(f"Ping Redis 失败: {e}")
             return False
 
+
+redis_client = RedisClient()
+
 # --- 使用示例 ---
 if __name__ == "__main__":
     # 获取单例实例（第一次调用会创建连接）
