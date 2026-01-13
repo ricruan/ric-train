@@ -21,10 +21,11 @@ class BaseNode(ABC):
 
     def __init__(self,
                  current_node: str | list[str],
-                 node_func: Callable,
+                 node_func: Callable | str,
                  last_node: str | list[str] = '',
                  next_node: str | list[str] = '',
                  conditional_params: Optional[ConditionalParams] = None,
+                 node_func_mapping: dict = None,
                  node_type: NodeTypeEnum = NodeTypeEnum.NORMAL_NODE):
         """
         :param current_node: 当前节点名称
@@ -32,6 +33,7 @@ class BaseNode(ABC):
         :param last_node: last节点名称
         :param next_node: next节点名称
         :param conditional_params: 条件参数，条件Node时使用
+        :param node_func_mapping: 节点函数映射字典
         :param node_type: 节点类型
         """
         self.node_name = current_node
@@ -39,7 +41,16 @@ class BaseNode(ABC):
         self.source_node = last_node
         self.end_node = next_node
         self.conditional_params = conditional_params
+        self.node_func_mapping = node_func_mapping or {}
         self.node_type = node_type
+
+    @property
+    def callable_node_func(self):
+        if isinstance(self.node_func,str):
+            return self.node_func_mapping.get(self.node_func)
+        else:
+            return self.node_func
+
 
     def _register_edge(self, work_flow: StateGraph):
         """
@@ -55,7 +66,11 @@ class BaseNode(ABC):
         :param work_flow: 工作流
         :return:
         """
-        self.add_node_plus(work_flow=work_flow, node_name=self.node_name, node_func=self.node_func)
+        if self.node_type == NodeTypeEnum.NORMAL_NODE:
+            self.add_node_plus(work_flow=work_flow, node_name=self.node_name, node_func=self.callable_node_func)
+        elif self.node_type == NodeTypeEnum.MULTI_NODE:
+            for i in self.node_name:
+                self.add_node_plus(work_flow=work_flow, node_name=i, node_func=self.node_func_mapping.get(i))
 
     def register_edge(self, work_flow: StateGraph):
         """

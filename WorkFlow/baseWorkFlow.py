@@ -8,6 +8,7 @@ from WorkFlow import graph_node_mapping, edge_condition_mapping, base_graph_node
 from WorkFlow.baseState import BaseState
 from WorkFlow.exception import WorkFlowBaseException
 from WorkFlow.models.nodes.baseNode import BaseNode
+from WorkFlow.models.nodes.nodeFactory import NodeFactory
 
 logger = logging.getLogger(__name__)
 
@@ -215,4 +216,6 @@ class BaseWorkFlow:
 if __name__ == "__main__":
     state = BaseState(name='123')
     test = BaseWorkFlow(node_list=['say_hello', ('say_bye','early_stop'),['say_1','say_2','say_3'],['say_2','say_3'],'say_4','say_hello'])
-    test.invoke(input_data=state)
+    test1 = NodeFactory.nodelist_2_node(test.node_list,graph_node_mapping)
+    print(test1)
+    # test.invoke(input_data=state)
