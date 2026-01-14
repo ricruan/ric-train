@@ -215,7 +215,7 @@ class BaseWorkFlow:
 
 if __name__ == "__main__":
     state = BaseState(name='123')
-    test = BaseWorkFlow(node_list=['say_hello', ('say_bye','early_stop'),['say_1','say_2','say_3'],['say_2','say_3'],'say_4','say_hello'])
-    test1 = NodeFactory.nodelist_2_node(test.node_list,graph_node_mapping)
+    # test = BaseWorkFlow(node_list=['say_hello', ('say_bye','early_stop'),['say_1','say_2','say_3'],['say_2','say_3'],'say_4','say_hello'])
+    test1 = NodeFactory.nodelist_2_node(['say_hello', ('say_bye','early_stop'),['say_1','say_2','say_3'],['say_2','say_3'],'say_4','say_hello'],graph_node_mapping)
     print(test1)
     # test.invoke(input_data=state)
