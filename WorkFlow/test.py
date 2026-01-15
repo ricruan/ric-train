@@ -27,9 +27,10 @@ class BaseWorkFlow:
 
     def _init(self):
         self._init_work_flow()
-        node_instance = NodeFactory.nodelist_2_node(self.node_list,graph_node_mapping)
+        # todo 加一个check 允许重复节点出现
+        node_instance = NodeFactory.nodelist_2_node(self.work_flow,self.node_list,graph_node_mapping,edge_condition_mapping)
         for i in node_instance:
-            i.register_node(self.work_flow)
+            i.register_edge()
         self.workflow_client = self.work_flow.compile()
 
 
@@ -46,4 +47,4 @@ if __name__ == "__main__":
     test = BaseWorkFlow(node_list=['say_hello', ('say_bye','early_stop'),['say_1','say_2','say_3'],['say_2','say_3'],'say_4','say_hello'])
     # test1 = NodeFactory.nodelist_2_node(['say_hello', ('say_bye','early_stop'),['say_1','say_2','say_3'],['say_2','say_3'],'say_4','say_hello'],graph_node_mapping)
     print(test)
-    # test.invoke(input_data=state)
+    test.invoke(input_data=state)

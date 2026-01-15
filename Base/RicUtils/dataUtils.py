@@ -66,6 +66,28 @@ def seq_safe_get(seq : list|tuple, index: int, default = None):
     :return:
     """
     try:
-        return seq[index]
+        return seq[index] if index >= 0 else default
     except IndexError:
         return default
+
+
+def remove_none(iterable):
+    """
+    移除可迭代对象中的所有 None 值，并返回同类型的结果。
+
+    支持: list, set, tuple 等常见类型。
+    对于不支持的类型，默认返回 list。
+    """
+    # 过滤掉 None
+    filtered = [x for x in iterable if x is not None]
+
+    # 根据输入类型返回对应类型
+    if isinstance(iterable, list):
+        return filtered
+    elif isinstance(iterable, set):
+        return set(filtered)
+    elif isinstance(iterable, tuple):
+        return tuple(filtered)
+    else:
+        # 其他类型（如 generator）默认返回 list
+        return filtered
