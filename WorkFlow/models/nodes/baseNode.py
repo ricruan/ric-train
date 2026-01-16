@@ -67,7 +67,8 @@ class BaseNode(ABC):
         底层是set() 重复注册无所谓
         :return:
         """
-        self.add_edge_plus(start_key=self.source_node, end_key=self.end_node)
+        self.add_edge_plus(start_key=self.source_node, end_key=self.node_name)
+        self.add_edge_plus(start_key=self.node_name, end_key=self.end_node)
 
     @staticmethod
     def _node_2_list(node: NodeName):
