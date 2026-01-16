@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from typing import Any, Optional, Callable
 
@@ -53,7 +54,13 @@ class BaseNode(ABC):
         self.work_flow = work_flow
 
     def get_callable_node_func(self, node: str):
-        return self.node_func_mapping.get(node)
+        res = self.node_func_mapping.get(node)
+        if not res:
+            # 下划线数字后缀
+            res = self.node_func_mapping.get(re.sub(r'_[0-9]+$', '', node))
+        if not res:
+            raise WorkFlowBaseException(f"Node:{node} 获取节点函数获取存在")
+        return res
 
     def _register_edge(self):
         """
@@ -124,6 +131,7 @@ class BaseNode(ABC):
         if isinstance(node_name, list) or isinstance(node_name, set):
             for i in node_name:
                 self.add_node_plus(node_name=i)
+            return
         if isinstance(node_name, str):
             if node_name in self.work_flow.nodes:
                 return

@@ -7,7 +7,6 @@ from Base.RicUtils.dataUtils import seq_safe_get
 from WorkFlow import graph_node_mapping, edge_condition_mapping, base_graph_node_mapping, init_base_node
 from WorkFlow.baseState import BaseState
 from WorkFlow.exception import WorkFlowBaseException
-from WorkFlow.models.nodes.baseNode import BaseNode
 from WorkFlow.models.nodes.nodeFactory import NodeFactory
 
 logger = logging.getLogger(__name__)
