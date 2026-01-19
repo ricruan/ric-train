@@ -21,7 +21,6 @@ class BaseWorkFlow:
         self._init()
 
     def _node_list_check(self):
-        # TODO 连续数组中间加入间隔点
         def _unique_name(name: str, _registered_node: list[str]) -> str:
             """生成不重复的节点名"""
             if name not in _registered_node:
@@ -47,6 +46,7 @@ class BaseWorkFlow:
 
         tem_node_list = []
         registered_node = []
+        last_item = None
 
         for i in self.node_list:
 
@@ -58,8 +58,9 @@ class BaseWorkFlow:
                         new_list.append(_register(s))
                     else:
                         new_list.append(s)
+                if isinstance(last_item,list):
+                    tem_node_list.append("_")
                 tem_node_list.append(new_list)
-
             # ---------- tuple ----------
             elif isinstance(i, tuple):
                 lst = list(i)
@@ -82,14 +83,14 @@ class BaseWorkFlow:
                         lst[2] = new_sub_list
 
                 tem_node_list.append(tuple(lst))
-
             # ---------- str ----------
             elif isinstance(i, str):
                 tem_node_list.append(_register(i))
-
             # ---------- 其他 ----------
             else:
                 tem_node_list.append(i)
+
+            last_item = i
 
         self.node_list = tem_node_list
 
@@ -111,7 +112,7 @@ class BaseWorkFlow:
 
 if __name__ == "__main__":
     state = BaseState(name='123')
-    test = BaseWorkFlow(node_list=['say_hello', ('say_bye','early_stop'),['continue_node','say_1','say_2','say_3'],'say_4','say_hello'])
+    test = BaseWorkFlow(node_list=['say_hello', ('say_bye','early_stop'),['continue_node','say_1','say_2','say_3'],['say_4','say_bye'],'say_hello'])
     # test1 = NodeFactory.nodelist_2_node(['say_hello', ('say_bye','early_stop'),['say_1','say_2','say_3'],['say_2','say_3'],'say_4','say_hello'],graph_node_mapping)
     print(test)
     test.invoke(input_data=state)
