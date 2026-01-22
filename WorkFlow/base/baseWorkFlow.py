@@ -3,7 +3,7 @@ from typing import Optional
 
 from langgraph.graph import StateGraph
 from WorkFlow import graph_node_mapping, edge_condition_mapping
-from WorkFlow.baseState import BaseState
+from WorkFlow.base.baseState import BaseState
 from WorkFlow.models.nodes.nodeFactory import NodeFactory
 
 logger = logging.getLogger(__name__)

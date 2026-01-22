@@ -1,10 +1,15 @@
 from abc import abstractmethod, ABC
-from typing import Any, Dict, List, Generator, AsyncGenerator
+from typing import Any, Dict, List, Generator, AsyncGenerator, Optional
+
+from Base.Ai.base.baseEnum import LLMTypeEnum
+
 
 class BaseLlm(ABC):
-    def __init__(self, model_name: str, **default_params: Any):
+    def __init__(self, model_name: str,model_type : Optional[LLMTypeEnum] = None, **default_params: Any):
         self.model_name = model_name
         self.default_params = default_params
+        self.model_type: Optional[LLMTypeEnum] = model_type
+        self.model_client = None
 
     @abstractmethod
     def init_model(self):
@@ -32,7 +37,7 @@ class BaseLlm(ABC):
 
     @abstractmethod
     async def astream(
-        self, prompt: str, **kwargs: Any
+            self, prompt: str, **kwargs: Any
     ) -> AsyncGenerator[str, None]:
         pass
 

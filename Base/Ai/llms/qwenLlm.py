@@ -1,14 +1,18 @@
 from typing import Any, AsyncGenerator, Generator, List, Dict
 
+from Base.Ai.base.baseEnum import LLMTypeEnum
 from Base.Ai.base.baseLlm import BaseLlm
+from openai import OpenAI
 
 
 class QwenLlm(BaseLlm):
 
-    def __init__(self, model_name: str, **default_params: Any):
-        super().__init__(model_name, **default_params)
-        self.model_name = model_name
-        self.default_params = default_params
+    def __init__(self, api_key: str, base_url: str, **default_params: Any):
+        super().__init__(model_name=LLMTypeEnum.QWEN.value, model_type=LLMTypeEnum.QWEN, **default_params)
+        self.init_qwen_model_by_open_ai(api_key=api_key, base_url=base_url)
+
+    def init_qwen_model_by_open_ai(self, api_key: str, base_url: str):
+        self.model_client = OpenAI(api_key=api_key, base_url=base_url, )
 
     def init_model(self):
         pass
@@ -38,5 +42,3 @@ class QwenLlm(BaseLlm):
     @property
     def supports_streaming(self) -> bool:
         return True
-
-

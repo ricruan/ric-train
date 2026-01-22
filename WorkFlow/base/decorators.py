@@ -1,7 +1,7 @@
 import copy
 
 from Base.RicUtils.dataUtils import calculate_diff_dict
-from WorkFlow.baseState import BaseState
+from WorkFlow.base.baseState import BaseState
 from functools import wraps
 
 

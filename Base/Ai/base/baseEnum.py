@@ -1,5 +1,7 @@
 from enum import Enum
 
 
-class NodeTypeEnum(Enum):
-    pass
+class LLMTypeEnum(Enum):
+    """LLM类型枚举"""
+    QWEN = 'qwen'
+    """千问"""

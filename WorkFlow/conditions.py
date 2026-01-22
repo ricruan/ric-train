@@ -1,5 +1,5 @@
 from WorkFlow.base.decorators import edge_condition
-from WorkFlow.baseState import BaseState
+from WorkFlow.base.baseState import BaseState
 from langgraph.graph import END
 
 @edge_condition

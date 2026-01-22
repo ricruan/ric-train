@@ -1,9 +1,10 @@
 import logging
 import sys
 from logging.handlers import TimedRotatingFileHandler
-from pathlib import Path
 from dotenv import load_dotenv
 import os
+
+from Base.RicUtils.pathUtils import find_project_root
 
 load_dotenv()
 
@@ -92,7 +93,8 @@ def setup_logging():
         return
     
     # 创建logs目录（如果不存在）
-    log_dir = Path("logs")
+    project_root = find_project_root()
+    log_dir = project_root / "logs"
     log_dir.mkdir(exist_ok=True)
 
     # 创建日志格式

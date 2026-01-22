@@ -7,7 +7,7 @@ from WorkFlow.base.enum import NodeTypeEnum
 from abc import ABC
 from langgraph.graph import StateGraph, START, END
 
-from WorkFlow.exception import WorkFlowBaseException
+from WorkFlow.base.exception import WorkFlowBaseException
 
 NodeName = str | list[str] | set[str] | tuple[str, ...]
 

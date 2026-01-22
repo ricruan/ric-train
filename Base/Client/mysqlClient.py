@@ -58,7 +58,7 @@ class MySQLClient:
             self._connection.close()
         self._connection = None
 
-    def execute_sync(self, sql: str, params: Optional[tuple] = None) -> List[Dict[str, Any]]:
+    def execute_sync(self, sql: str, params: Optional[tuple] = None):
         """
         同步执行 SQL 查询，并增加了自动重连和重试逻辑。
         """
@@ -99,6 +99,7 @@ class MySQLClient:
             except pymysql.err.MySQLError as e:
                 print(f"捕获到非连接相关的SQL错误: {e}")
                 raise e
+        return None
 
     async def execute_async(self, sql: str, params: Optional[tuple] = None) -> List[Dict[str, Any]]:
         """
@@ -124,7 +125,7 @@ class MySQLClient:
 
 
 
-class QueryBuilder:
+class SQLBuilder:
     """
     一个通过链式调用构造 SQL 查询的类，支持 JOIN、GROUP BY 和 ORDER BY。
     """
@@ -197,7 +198,7 @@ class QueryBuilder:
 
     def _add_join(self, join_type: str, other_builder, on_condition: str):
         """内部方法，用于添加 JOIN 信息。"""
-        if not isinstance(other_builder, QueryBuilder) or not other_builder._table:
+        if not isinstance(other_builder, SQLBuilder) or not other_builder._table:
             raise TypeError("join 方法需要一个已指定表名的 QueryBuilder 实例。")
         self._joins.append((join_type, other_builder, on_condition))
         return self
@@ -276,7 +277,7 @@ class QueryBuilder:
 
 
 if __name__ == '__main__' :
-    sql = QueryBuilder('daily_report').where('id > 1').to_sql()
-    print(str(sql))
-    r = MySQLClient().execute_sync(sql[0],sql[1])
+    _sql = SQLBuilder('daily_report').where('id > 1').to_sql()
+    print(str(_sql))
+    r = MySQLClient().execute_sync(_sql[0], _sql[1])
     print(r)

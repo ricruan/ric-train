@@ -1,5 +1,5 @@
 from WorkFlow.base.decorators import graph_node
-from WorkFlow.baseState import BaseState
+from WorkFlow.base.baseState import BaseState
 
 
 
