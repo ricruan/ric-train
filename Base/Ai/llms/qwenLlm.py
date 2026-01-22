@@ -3,6 +3,7 @@ from typing import Any, AsyncGenerator, Generator, List, Dict
 from Base.Ai.base.baseEnum import LLMTypeEnum
 from Base.Ai.base.baseLlm import BaseLlm
 from openai import OpenAI
+from Base import settings
 
 
 class QwenLlm(BaseLlm):
@@ -12,7 +13,7 @@ class QwenLlm(BaseLlm):
         self.init_qwen_model_by_open_ai(api_key=api_key, base_url=base_url)
 
     def init_qwen_model_by_open_ai(self, api_key: str, base_url: str):
-        self.model_client = OpenAI(api_key=api_key, base_url=base_url, )
+        self.model_client = OpenAI(api_key=api_key, base_url=base_url, timeout=settings.llm.timeout)
 
     def init_model(self):
         pass

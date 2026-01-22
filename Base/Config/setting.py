@@ -1,6 +1,8 @@
-from typing import Optional
+import os
+from typing import Optional, Any, Dict
+from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from Base.RicUtils.pathUtils import find_project_root
@@ -32,6 +34,16 @@ class EmailSettings(BaseSettings):
 
     model_config = SettingsConfigDict(extra="ignore")
 
+# =========================
+# LLM Basic
+# =========================
+class LLMSettings(BaseSettings):
+    timeout: float = 30.0
+
+    model_config = SettingsConfigDict(
+        env_prefix="LLM_",
+        extra="ignore",
+    )
 
 # =========================
 # DashScope
@@ -109,13 +121,110 @@ class TencentCOSSettings(BaseSettings):
 
 
 # =========================
+# Default Settings
+# =========================
+class DefaultSettings(BaseSettings):
+    """
+    默认设置类，自动加载 .env 文件中的所有额外变量
+
+    使用 extra="allow" 接受任意环境变量。
+    提供便捷的字典式访问和动态字段查询。
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=find_project_root() / ".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        extra="allow",  # 允许额外的字段
+    )
+
+    def __getitem__(self, key: str) -> Any:
+        """字典式访问环境变量"""
+        return getattr(self, key)
+
+    def __contains__(self, key: str) -> bool:
+        """检查环境变量是否存在"""
+        return key in self.model_dump()
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """
+        安全获取环境变量值
+
+        Args:
+            key: 环境变量名
+            default: 默认值，如果变量不存在则返回该值
+
+        Returns:
+            环境变量值或默认值
+        """
+        return getattr(self, key, default)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        将所有设置转换为字典
+
+        Returns:
+            包含所有环境变量的字典
+        """
+        return self.model_dump()
+
+    @classmethod
+    def load_env_vars(cls, env_file: Optional[Path] = None) -> "DefaultSettings":
+        """
+        从指定的 .env 文件加载环境变量
+
+        Args:
+            env_file: .env 文件路径，如果为 None 则使用默认路径
+
+        Returns:
+            DefaultSettings 实例
+        """
+        if env_file is None:
+            env_file = find_project_root() / ".env"
+
+        if env_file.exists():
+            return cls(_env_file=env_file)
+        return cls()
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def parse_env_vars(cls, v: Any, info) -> Any:
+        """
+        环境变量值解析器
+
+        自动处理常见的数据类型转换。
+        """
+        if isinstance(v, str):
+            # 尝试转换为布尔值
+            if v.lower() in ("true", "yes", "1"):
+                return True
+            if v.lower() in ("false", "no", "0"):
+                return False
+
+            # 尝试转换为数字
+            try:
+                return int(v)
+            except ValueError:
+                try:
+                    return float(v)
+                except ValueError:
+                    pass
+
+        return v
+
+
+# =========================
 # App Settings
 # =========================
 class Settings(BaseSettings):
+    """应用程序主设置类"""
+
     log_level: str = "INFO"
+    default: DefaultSettings = Field(default_factory=DefaultSettings)
 
     mysql: MySQLSettings = Field(default_factory=MySQLSettings)
     email: EmailSettings = Field(default_factory=EmailSettings)
+    llm: LLMSettings = Field(default_factory=LLMSettings)
     dashscope: DashScopeSettings = Field(default_factory=DashScopeSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
     ffmpeg: FFmpegSettings = Field(default_factory=FFmpegSettings)
