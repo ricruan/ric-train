@@ -9,7 +9,7 @@ def graph_node(func=None, *,is_default: bool = False):
     """
     如果节点函数忘记返回 修改内容,Here 会自动对比差异并返回差异部分进行更新
     :param func:
-    :param is_default:
+    :param is_default: 是否为需要初始化的基础默认节点
     :return:
     """
     if func is None:

@@ -32,16 +32,14 @@ edge_condition_mapping: Dict[str, Callable] = {}
 
 def load_node(module: Any, mapping_dict: Dict[str, Callable]) -> None:
     """
-    从模块加载图节点
-
+    从模块自动加载带@graph_node装饰器的函数作为图节点
+    ./base/decorators.py
     同时加载基础节点（标记为 _is_default）和自定义节点（标记为 _is_graph_node）。
 
     Args:
         module: 要加载节点的模块
         mapping_dict: 节点映射字典，用于存储加载的节点
 
-    Examples:
-        >>> load_node(custom_nodes, graph_node_mapping)
     """
     load_base_node(module, base_graph_node_mapping)
     _res = get_sign_func_from_module(sign='_is_graph_node', module=module)
@@ -58,8 +56,6 @@ def load_base_node(module: Any, mapping_dict: Dict[str, Callable]) -> None:
         module: 要加载基础节点的模块
         mapping_dict: 基础节点映射字典，用于存储加载的节点
 
-    Examples:
-        >>> load_base_node(base_nodes, base_graph_node_mapping)
     """
     _res = get_sign_func_from_module(sign='_is_default', module=module)
     mapping_dict.update(_res)
@@ -71,39 +67,20 @@ def load_base_node(module: Any, mapping_dict: Dict[str, Callable]) -> None:
 
 def load_condition(module: Any, mapping_dict: Dict[str, Callable]) -> None:
     """
-    从模块加载边条件
-
+    从模块自动加载带@edge_condition装饰器的函数作为边条件
+    ./base/decorators.py
     加载标记为 _is_edge_condition 的条件函数。
 
     Args:
         module: 要加载条件的模块
         mapping_dict: 条件映射字典，用于存储加载的条件
 
-    Examples:
-        >>> load_condition(conditions, edge_condition_mapping)
     """
     _res = get_sign_func_from_module(sign='_is_edge_condition', module=module)
     mapping_dict.update(_res)
 
 
-# =========================
-# 图初始化函数
-# =========================
 
-def init_base_node(work_flow: StateGraph) -> None:
-    """
-    将所有基础节点添加到工作流中
-
-    Args:
-        work_flow: LangGraph 的 StateGraph 实例
-
-    Examples:
-        >>> from langgraph.graph import StateGraph
-        >>> workflow = StateGraph(MyState)
-        >>> init_base_node(workflow)
-    """
-    for k, v in base_graph_node_mapping.items():
-        work_flow.add_node(k, v)
 
 
 # =========================

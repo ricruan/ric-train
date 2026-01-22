@@ -1,7 +1,7 @@
 from langgraph.graph import StateGraph
 
 from Base.RicUtils.dataUtils import seq_safe_get
-from WorkFlow import graph_node_mapping
+from WorkFlow._loader import graph_node_mapping
 from WorkFlow.models.nodes.baseNode import ConditionalParams
 from WorkFlow.models.nodes.conditionalNode import ConditionalNode
 from WorkFlow.models.nodes.multiNode import MultiNode
