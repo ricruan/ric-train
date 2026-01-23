@@ -51,7 +51,8 @@ class LLMSettings(BaseSettings):
 class DashScopeSettings(BaseSettings):
     api_url: str = Field(..., alias="DSC_API_URL")
     api_key: str = Field(..., alias="DASHSCOPE_API_KEY")
-
+    base_url: str = Field(..., alias="QWEN_BASE_URL")
+    default_model: str = Field(..., alias="QWEN_DEFAULT_MODEL")
     model_config = SettingsConfigDict(extra="ignore")
 
 
