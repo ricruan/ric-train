@@ -1,32 +1,25 @@
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from Base.Ai.base.baseEnum import LLMTypeEnum
 from Base.Ai.base.baseLlm import BaseLlm
-from Base.Ai.base.baseSetting import DashScopeConfig
+from Base.Ai.base.baseSetting import DeepSeekConfig
 from Base import settings
 
 
 # noinspection PyTypeChecker
-class QwenLlm(BaseLlm):
+class DeepSeekLlm(BaseLlm):
     """
-    Qwen 大语言模型实现
+    DeepSeek 大语言模型实现
 
-    使用 OpenAI 兼容接口调用 Qwen 模型。
+    使用 OpenAI 兼容接口调用 DeepSeek 模型。
     支持同步/异步调用、流式/非流式输出。
     """
 
-    # Qwen 模型的上下文窗口大小（token 数）
+    # DeepSeek 模型的上下文窗口大小（token 数）
     CONTEXT_WINDOW = {
-        "qwen-turbo": 8192,
-        "qwen-plus": 32768,
-        "qwen-max": 32768,
-        "qwen-long": 1000000,
-        "qwen2.5-72b-instruct": 131072,
-        "qwen2.5-32b-instruct": 131072,
-        "qwen2.5-14b-instruct": 131072,
-        "qwen2.5-7b-instruct": 131072,
-        "qwen-vl-plus": 8192,
-        "qwen-vl-max": 32768,
+        "deepseek-chat": 128000,
+        "deepseek-coder": 128000,
+        "deepseek-reasoner": 64000,
     }
 
     def __init__(
@@ -34,17 +27,17 @@ class QwenLlm(BaseLlm):
         api_key: str = None,
         base_url: str = None,
         model: str = None,
-        config: Optional[DashScopeConfig] = None,
+        config: Optional[DeepSeekConfig] = None,
         **default_params: Any
     ):
         """
-        初始化 Qwen 模型
+        初始化 DeepSeek 模型
 
         Args:
             api_key: API 密钥
-            base_url: API 基础 URL，如果为 None 则使用 DashScope 默认 URL
-            model: 模型名称，默认为 qwen-plus
-            config: DashScope 配置对象
+            base_url: API 基础 URL，如果为 None 则使用 DeepSeek 默认 URL
+            model: 模型名称，默认为 deepseek-chat
+            config: DeepSeek 配置对象
             **default_params: 默认参数
         """
         # 处理配置对象和默认参数
@@ -54,15 +47,15 @@ class QwenLlm(BaseLlm):
             model=model,
             config=config,
             default_params=default_params,
-            base_url_error_msg="未配置Qwen模型的Base_Url"
+            base_url_error_msg="未配置DeepSeek模型的Base_Url"
         )
 
         super().__init__(
             model_name=model,
-            model_type=LLMTypeEnum.QWEN,
+            model_type=LLMTypeEnum.DEEPSEEK,
             **default_params
         )
-        self.model = model or settings.dashscope.default_model
+        self.model = model or settings.deepseek.default_model
         self._api_key = api_key
         self._base_url = base_url
         self.init_openai_client(api_key=api_key, base_url=base_url, logger_name=__name__)
@@ -78,8 +71,8 @@ class QwenLlm(BaseLlm):
         for key, size in self.CONTEXT_WINDOW.items():
             if key in self.model.lower():
                 return size
-        # 默认返回 32768
-        return 32768
+        # 默认返回 128000
+        return 128000
 
     @property
     def supports_streaming(self) -> bool:
@@ -96,16 +89,16 @@ class QwenLlm(BaseLlm):
 # 便捷函数
 # =========================
 
-def create_qwen_llm(
+def create_deepseek_llm(
     api_key: str = None,
     base_url: str = None,
     model: str = None,
     temperature: float = None,
     max_tokens: int = None,
     **kwargs: Any
-) -> QwenLlm:
+) -> DeepSeekLlm:
     """
-    便捷函数：创建 Qwen LLM 实例
+    便捷函数：创建 DeepSeek LLM 实例
 
     Args:
         api_key: API 密钥，如果为 None 则从 settings 获取
@@ -116,19 +109,19 @@ def create_qwen_llm(
         **kwargs: 其他参数
 
     Returns:
-        QwenLlm 实例
+        DeepSeekLlm 实例
 
     """
     # 如果没有提供 api_key，尝试从 settings 获取
     if api_key is None:
-        if not hasattr(settings, 'dashscope'):
-            raise ValueError("DashScope settings not found. Please provide api_key or configure settings.")
-        api_key = settings.dashscope.api_key
-    base_url = base_url or settings.dashscope.base_url
-    model = model or settings.dashscope.default_model
+        if not hasattr(settings, 'deepseek'):
+            raise ValueError("DeepSeek settings not found. Please provide api_key or configure settings.")
+        api_key = settings.deepseek.api_key
+    base_url = base_url or settings.deepseek.base_url
+    model = model or settings.deepseek.default_model
 
     # 创建配置对象
-    config = DashScopeConfig(
+    config = DeepSeekConfig(
         api_key=api_key,
         base_url=base_url,
         model=model,
@@ -137,13 +130,13 @@ def create_qwen_llm(
         **kwargs
     )
 
-    return QwenLlm(config=config)
+    return DeepSeekLlm(config=config)
 
 
 if __name__ == '__main__':
 
     # 示例：使用便捷函数创建
-    llm = create_qwen_llm()
+    llm = create_deepseek_llm()
 
     print("=== 模型信息 ===")
     info = llm.get_model_info()
@@ -166,4 +159,3 @@ if __name__ == '__main__':
     # for chunk in llm.stream("请写一首关于春天的诗"):
     #     print(chunk, end="", flush=True)
     # print()
-

@@ -57,6 +57,16 @@ class DashScopeSettings(BaseSettings):
 
 
 # =========================
+# DeepSeek
+# =========================
+class DeepSeekSettings(BaseSettings):
+    api_key: str = Field(..., alias="DEEPSEEK_API_KEY")
+    base_url: str = Field(..., alias="DEEPSEEK_BASE_URL")
+    default_model: str = Field(..., alias="DEEPSEEK_DEFAULT_MODEL")
+    model_config = SettingsConfigDict(extra="ignore")
+
+
+# =========================
 # Redis
 # =========================
 class RedisSettings(BaseSettings):
@@ -227,6 +237,7 @@ class Settings(BaseSettings):
     email: EmailSettings = Field(default_factory=EmailSettings)
     llm: LLMSettings = Field(default_factory=LLMSettings)
     dashscope: DashScopeSettings = Field(default_factory=DashScopeSettings)
+    deepseek: DeepSeekSettings = Field(default_factory=DeepSeekSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
     ffmpeg: FFmpegSettings = Field(default_factory=FFmpegSettings)
     minio: MinIOSettings = Field(default_factory=MinIOSettings)

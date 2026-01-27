@@ -105,3 +105,33 @@ class DashScopeConfig(LLMConfig):
             base_url=base_url,
             **kwargs
         )
+
+
+@dataclass
+class DeepSeekConfig(LLMConfig):
+    """
+    DeepSeek (深度求索) 配置
+
+    专用于 DeepSeek API 的配置类。
+    """
+
+    def __init__(self, api_key: str = None, model: str = None, base_url: str = None, **kwargs):
+        """
+        初始化 DeepSeek 配置
+
+        Args:
+            api_key: DeepSeek API 密钥
+            model: 模型名称
+            base_url: API 基础 URL，默认为 DeepSeek 官方 API 地址
+            **kwargs: 其他参数
+        """
+        base_url = base_url or settings.deepseek.base_url
+        api_key = api_key or settings.deepseek.api_key
+        model = model or settings.deepseek.default_model
+
+        super().__init__(
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            **kwargs
+        )
