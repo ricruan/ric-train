@@ -1,5 +1,4 @@
 import time
-import logging
 
 import pymysql
 import asyncio
@@ -9,11 +8,9 @@ import os
 
 from Base.Config.setting import settings
 
-logger = logging.getLogger(__name__)
-
 load_dotenv()  # 自动加载 .env 文件
 
-db_config = settings.mysql.model_dump()
+db_config = settings.mysql.dict()
 
 
 class MySQLClient:
@@ -27,16 +24,14 @@ class MySQLClient:
         charset: str = None,
         max_retries: int = 1
     ):
-        self.host = host or db_config.get('host')
-        self.port = port or db_config.get('port')
-        self.user = user or db_config.get('user')
-        self.password = password or db_config.get('password')
-        self.database = database or db_config.get('database')
-        self.charset = charset or db_config.get('charset')
+        self.host = host or db_config['host']
+        self.port = port or db_config['port']
+        self.user = user or db_config['user']
+        self.password = password or db_config['password']
+        self.database = database or db_config['database']
+        self.charset = charset or db_config['charset']
         self._connection: Optional[pymysql.Connection] = None
         self.max_retries = max_retries
-
-        self.connect()
 
     def connect(self):
         """建立同步连接"""
@@ -48,7 +43,7 @@ class MySQLClient:
                 password=self.password,
                 database=self.database,
                 charset=self.charset,
-                autocommit=False,  # 关闭自动提交，需要手动控制事务
+                autocommit=True,  # 自动提交，避免忘记 commit  不应该加这个，但是演示 无所谓
                 connect_timeout = 10
             )
 
@@ -58,124 +53,17 @@ class MySQLClient:
             self._connection.close()
         self._connection = None
 
-    def ping(self) -> bool:
-        """
-        测试 MySQL 连接是否正常。
-        如果连接不存在或已关闭，会自动尝试建立连接。
-
-        Returns:
-            bool: 连接正常返回 True，否则返回 False
-        """
-        try:
-            # 检查连接是否存在且处于打开状态
-            if self._connection is None:
-                logger.info("MySQL 连接不存在，正在尝试连接...")
-                self.connect()
-
-            if not self._connection.open:
-                logger.info("MySQL 连接已关闭，正在尝试重新连接...")
-                self.connect()
-
-            # 执行 ping 测试连接活性
-            self._connection.ping(reconnect=False)
-            logger.info("MySQL 连接正常")
-            return True
-        except Exception as e:
-            logger.error(f"检测 MySQL 连接失败: {e}")
-            return False
-
-    def commit(self):
-        """提交当前事务"""
-        if self._connection and self._connection.open:
-            self._connection.commit()
-            logger.info("事务已提交")
-
-    def rollback(self):
-        """回滚当前事务"""
-        if self._connection and self._connection.open:
-            self._connection.rollback()
-            logger.warning("事务已回滚")
-
-    def create_database_if_not_exists(
-        self,
-        db_name: str,
-        charset: str = 'utf8mb4',
-        host: Optional[str] = None,
-        user: Optional[str] = None,
-        password: Optional[str] = None
-    ) -> bool:
-        """
-        如果数据库不存在则创建数据库。
-
-        Args:
-            db_name: 要创建的数据库名称
-            charset: 数据库字符集，默认 'utf8mb4'
-            host: MySQL 主机，如果不指定则使用实例配置
-            user: MySQL 用户名，如果不指定则使用实例配置
-            password: MySQL 密码，如果不指定则使用实例配置
-
-        Returns:
-            bool: 数据库已存在或创建成功返回 True，失败返回 False
-        """
-        try:
-            # 使用提供的参数或实例配置
-            conn_host = host or self.host
-            conn_user = user or self.user
-            conn_password = password or self.password
-
-            # 连接到 MySQL（不指定 database，或连到系统库）
-            temp_conn = pymysql.connect(
-                host=conn_host,
-                user=conn_user,
-                password=conn_password,
-                database='mysql',  # 连接到系统库
-                charset=charset
-            )
-
-            try:
-                with temp_conn.cursor() as cursor:
-                    # 检查数据库是否存在
-                    cursor.execute("SHOW DATABASES LIKE %s", (db_name,))
-                    result = cursor.fetchone()
-
-                    if result is None:
-                        logger.info(f"数据库 '{db_name}' 不存在，正在创建...")
-                        # 创建数据库（指定字符集）
-                        cursor.execute(
-                            f"CREATE DATABASE `{db_name}` CHARACTER SET {charset} COLLATE {charset}_unicode_ci"
-                        )
-                        temp_conn.commit()
-                        logger.info(f"数据库 '{db_name}' 创建成功！")
-                        return True
-                    else:
-                        logger.info(f"数据库 '{db_name}' 已存在。")
-                        return True
-            finally:
-                temp_conn.close()
-        except Exception as e:
-            logger.error(f"创建数据库 '{db_name}' 失败: {e}")
-            return False
-
-    def execute_sync(self, sql: str, params: Optional[tuple] = None, auto_commit: bool = False):
+    def execute_sync(self, sql: str, params: Optional[tuple] = None):
         """
         同步执行 SQL 查询，并增加了自动重连和重试逻辑。
-
-        Args:
-            sql: SQL语句
-            params: SQL参数
-            auto_commit: 是否自动提交（默认False，SELECT查询会自动提交，非SELECT需要手动提交）
         """
-        logger.info(f"执行SQL: {sql}")
-        if params:
-            logger.info(f"参数: {params}")
-
         # 尝试次数 = 1次初始尝试 + max_retries 次重试
         for attempt in range(self.max_retries + 1):
             try:
                 # 检查连接是否存在或是否已关闭
                 if self._connection is None or not self._connection.open:
                     if self._connection and not self._connection.open:
-                        logger.warning("连接不存在或已关闭，正在重新连接...")
+                        print("连接不存在或已关闭，正在重新连接...")
                     self.connect()
 
                 # *** 核心改动：在执行前检查连接活性 ***
@@ -184,56 +72,19 @@ class MySQLClient:
 
                 with self._connection.cursor(pymysql.cursors.DictCursor) as cursor:
                     cursor.execute(sql, params or ())
-
-                    # 判断 SQL 类型
-                    sql_upper = sql.strip().upper()
-
-                    # 需要返回结果的 SQL 类型
-                    is_query = (
-                        sql_upper.startswith("SELECT") or
-                        sql_upper.startswith("SHOW") or
-                        sql_upper.startswith("DESCRIBE") or
-                        sql_upper.startswith("DESC") or
-                        sql_upper.startswith("EXPLAIN") or
-                        sql_upper.startswith("PRAGMA")
-                    )
-
-                    if is_query:
-                        # 查询类 SQL，返回结果集
-                        result = cursor.fetchall()
-                        # 查询类 SQL 自动提交
-                        self._connection.commit()
-                        # 打印查询结果统计信息
-                        logger.info(f"查询结果总条数: {len(result)}")
-                        # 打印前3条详情
-                        if result:
-                            preview_count = min(3, len(result))
-                            logger.info(f"前{preview_count}条结果详情:")
-                            for i in range(preview_count):
-                                logger.info(f"  第{i+1}条: {result[i]}")
-                        return result
+                    if sql.strip().upper().startswith("SELECT"):
+                        return cursor.fetchall()
                     else:
-                        # 修改类 SQL（INSERT、UPDATE、DELETE），返回影响行数
-                        affected_rows = cursor.rowcount
-                        logger.info(f"影响行数: {affected_rows}")
-
-                        # 如果指定了 auto_commit，则提交事务
-                        if auto_commit:
-                            self._connection.commit()
-                            logger.info("SQL执行成功，已自动提交")
-                        else:
-                            logger.info("SQL执行成功，等待手动提交或回滚")
-
-                        return [{"affected_rows": affected_rows}]
+                        return [{"affected_rows": cursor.rowcount}]
 
             except pymysql.err.OperationalError as e:
                 # 捕获到操作错误（通常是连接问题）
-                logger.error(f"执行时捕获到连接错误: {e}. 尝试次数 {attempt + 1}/{self.max_retries + 1}")
+                print(f"执行时捕获到连接错误: {e}. 尝试次数 {attempt + 1}/{self.max_retries + 1}")
                 self.close()  # 彻底关闭失效的连接
 
                 # 如果这已经是最后一次尝试，则将异常抛出
                 if attempt >= self.max_retries:
-                    logger.error("已达到最大重试次数，抛出异常。")
+                    print("已达到最大重试次数，抛出异常。")
                     raise e
 
                 # 等待一小段时间再重试，避免立即重连给数据库造成压力
@@ -241,7 +92,7 @@ class MySQLClient:
 
                 # 捕获其他 pymysql 错误（如语法错误）并直接抛出，不进行重试
             except pymysql.err.MySQLError as e:
-                logger.error(f"捕获到非连接相关的SQL错误: {e}")
+                print(f"捕获到非连接相关的SQL错误: {e}")
                 raise e
         return None
 
@@ -284,8 +135,6 @@ class SQLBuilder:
         self._group_by_columns = []
         self._joins = []  # 存储 join 信息: (type, other_builder, on_condition)
         self._params = []
-        self._update_data = None  # 存储 UPDATE 数据
-        self._operation = 'SELECT'  # 操作类型：SELECT, UPDATE, INSERT, DELETE
 
     def query(self, table: str):
         """设置要查询的主表名 (FROM 子句)。"""
@@ -304,36 +153,10 @@ class SQLBuilder:
         设置要查询的字段 (SELECT 子句)。
         支持 'field' 和 'table.field' 格式。
         """
-        self._operation = 'SELECT'
         if fields:
             self._select_fields = ", ".join([self._quote_field(f) for f in fields])
         else:
             self._select_fields = "*"
-        return self
-
-    def update(self, data: Dict[str, Any]) -> 'SQLBuilder':
-        """
-        设置 UPDATE 操作的数据。
-        :param data: 要更新的字段和值，如 {'desc': 'processing', 'status': 'done'}
-        """
-        self._operation = 'UPDATE'
-        self._update_data = data
-        return self
-
-    def insert(self, data: Dict[str, Any] | List[Dict[str, Any]]) -> 'SQLBuilder':
-        """
-        设置 INSERT 操作的数据。
-        :param data: 要插入的数据，可以是单条字典或多条字典列表
-        """
-        self._operation = 'INSERT'
-        self._update_data = data
-        return self
-
-    def delete(self) -> 'SQLBuilder':
-        """
-        设置 DELETE 操作。
-        """
-        self._operation = 'DELETE'
         return self
 
     def where(self, condition: str, *params):
@@ -394,23 +217,10 @@ class SQLBuilder:
     def to_sql(self):
         """
         生成最终的 SQL 查询语句和参数。
-        支持 SELECT、UPDATE、INSERT、DELETE 操作。
         """
         if not self._table:
             raise ValueError("必须通过 query() 方法指定主表名。")
 
-        # 根据 operation 类型生成不同的 SQL
-        if self._operation == 'UPDATE':
-            return self._to_update_sql()
-        elif self._operation == 'INSERT':
-            return self._to_insert_sql()
-        elif self._operation == 'DELETE':
-            return self._to_delete_sql()
-        else:
-            return self._to_select_sql()
-
-    def _to_select_sql(self):
-        """生成 SELECT SQL"""
         # 确定 SELECT 字段，如果主查询未指定，则为 *
         select_clause = self._select_fields if self._select_fields is not None else "*"
         sql_parts = [f"SELECT {select_clause}"]
@@ -455,237 +265,14 @@ class SQLBuilder:
 
         return " ".join(sql_parts) + ";", tuple(final_params)
 
-    def _to_update_sql(self):
-        """生成 UPDATE SQL"""
-        if not self._update_data:
-            raise ValueError("UPDATE 操作必须提供数据。")
-
-        sql_parts = [f"UPDATE `{self._table}` SET"]
-
-        # 构建更新字段
-        set_clauses = []
-        params = []
-        for field, value in self._update_data.items():
-            set_clauses.append(f"{self._quote_field(field)} = %s")
-            params.append(value)
-
-        sql_parts.append(", ".join(set_clauses))
-
-        # WHERE 子句
-        if self._where_conditions:
-            sql_parts.append("WHERE " + " AND ".join(self._where_conditions))
-            params.extend(self._params)
-
-        return " ".join(sql_parts) + ";", tuple(params)
-
-    def _to_insert_sql(self):
-        """生成 INSERT SQL"""
-        if not self._update_data:
-            raise ValueError("INSERT 操作必须提供数据。")
-
-        # 处理单条或多条插入
-        if isinstance(self._update_data, list):
-            # 多条插入
-            if not self._update_data:
-                raise ValueError("插入数据不能为空。")
-            fields = list(self._update_data[0].keys())
-            quoted_fields = [self._quote_field(f) for f in fields]
-
-            placeholders = []
-            params = []
-            for row in self._update_data:
-                placeholders.append("(" + ", ".join(["%s"] * len(fields)) + ")")
-                params.extend(row.get(f) for f in fields)
-
-            sql = f"INSERT INTO `{self._table}` ({', '.join(quoted_fields)}) VALUES {', '.join(placeholders)}"
-            return sql + ";", tuple(params)
-        else:
-            # 单条插入
-            fields = list(self._update_data.keys())
-            quoted_fields = [self._quote_field(f) for f in fields]
-            values = [self._update_data[f] for f in fields]
-            placeholders = ", ".join(["%s"] * len(fields))
-
-            sql = f"INSERT INTO `{self._table}` ({', '.join(quoted_fields)}) VALUES ({placeholders})"
-            return sql + ";", tuple(values)
-
-    def _to_delete_sql(self):
-        """生成 DELETE SQL"""
-        sql_parts = [f"DELETE FROM `{self._table}`"]
-        params = list(self._params)
-
-        # WHERE 子句
-        if self._where_conditions:
-            sql_parts.append("WHERE " + " AND ".join(self._where_conditions))
-
-        return " ".join(sql_parts) + ";", tuple(params)
-
     def __str__(self):
         """允许直接打印实例时，显示生成的 SQL 语句和参数。"""
         sql, params = self.to_sql()
         return f"SQL: {sql}\nPARAMS: {params}"
 
 
-if __name__ == '__main__':
-
-    def test_simple_query():
-        # 示例1：简单查询（自动提交）
-        print("=" * 50)
-        print("示例1：简单查询")
-        print("=" * 50)
-        _sql = SQLBuilder('daily_report').where('id > 1').to_sql()
-        r = MySQLClient(database='worlin').execute_sync(_sql[0], _sql[1])
-
-    def test_ping():
-        # 示例2：测试 MySQL 连接状态
-        print("\n" + "=" * 50)
-        print("示例2：测试 MySQL 连接状态")
-        print("=" * 50)
-        client = MySQLClient(database='worlin')
-        print(f"MySQL 连接状态: {client.ping()}")
-
-    def test_create_database():
-        # 示例2.5：创建数据库（如果不存在）
-        print("\n" + "=" * 50)
-        print("示例2.5：创建数据库（如果不存在）")
-        print("=" * 50)
-        client = MySQLClient()
-        # 使用实例配置创建数据库
-        result = client.create_database_if_not_exists('test_db')
-        print(f"创建数据库结果: {result}")
-        # 也可以指定自定义参数
-        # result = client.create_database_if_not_exists(
-        #     db_name='custom_db',
-        #     host='localhost',
-        #     user='root',
-        #     password='password'
-        # )
-
-    def test_use_backticks():
-        # 示例3：方案1 - 使用反引号包裹保留关键字
-        print("\n" + "=" * 50)
-        print("示例3：方案1 - 使用反引号包裹保留关键字")
-        print("=" * 50)
-        with MySQLClient(database='worlin') as client:
-            try:
-                # 方案1：手动使用反引号包裹 desc（保留关键字）
-                client.execute_sync("UPDATE daily_report SET `desc` = 'processing' WHERE id = 1")
-                client.commit()
-                print("方案1：事务已提交（使用反引号）")
-            except Exception as e:
-                client.rollback()
-                print(f"发生错误，事务已回滚: {e}")
-
-    def test_use_sqlbuilder():
-        # 示例4：方案2 - 使用 SQLBuilder 自动处理字段引号
-        print("\n" + "=" * 50)
-        print("示例4：方案2 - 使用 SQLBuilder 自动处理字段引号")
-        print("=" * 50)
-        with MySQLClient(database='worlin') as client:
-            try:
-                # 方案2：使用 SQLBuilder 自动添加反引号
-                _sql = SQLBuilder('daily_report').update({'desc': 'done'}).where('id = %s', 1).to_sql()
-                print(f"生成的SQL: {_sql[0]}")
-                print(f"参数: {_sql[1]}")
-                client.execute_sync(_sql[0], _sql[1])
-                client.commit()
-                print("方案2：事务已提交（使用 SQLBuilder）")
-            except Exception as e:
-                client.rollback()
-                print(f"发生错误，事务已回滚: {e}")
-
-    def test_trans_success():
-        # 示例5：事务控制 - 成功提交（多条 SQL）
-        print("\n" + "=" * 50)
-        print("示例5：事务控制 - 成功提交（多条 SQL）")
-        print("=" * 50)
-        with MySQLClient(database='worlin') as client:
-            try:
-                # 执行多条SQL
-                client.execute_sync("UPDATE daily_report SET `desc` = 'processing' WHERE id = 1")
-                client.execute_sync("UPDATE daily_report SET `desc` = 'done' WHERE id = 2")
-                # 手动提交事务
-                client.commit()
-                print("事务已提交")
-            except Exception as e:
-                # 发生错误时回滚
-                client.rollback()
-                print(f"发生错误，事务已回滚: {e}")
-
-    def test_trans_fail():
-        # 示例6：事务控制 - 发生错误回滚
-        print("\n" + "=" * 50)
-        print("示例6：事务控制 - 发生错误回滚")
-        print("=" * 50)
-        with MySQLClient(database='worlin') as client:
-            try:
-                # 执行多条SQL，最后一条会失败
-                client.execute_sync("UPDATE daily_report SET `desc` = 'processing' WHERE id = 1")
-                client.execute_sync("UPDATE daily_report SET `desc` = 'done' WHERE id = 2")
-                # 故意执行一个错误的SQL
-                client.execute_sync("UPDATE daily_report SET invalid_column = 'test' WHERE id = 1")
-                client.commit()
-            except Exception as e:
-                # 发生错误时回滚
-                client.rollback()
-                print(f"发生错误，事务已回滚: {e}")
-
-    def test_auto_commit():
-        # 示例7：使用 auto_commit 参数自动提交
-        print("\n" + "=" * 50)
-        print("示例7：使用 auto_commit 参数自动提交")
-        print("=" * 50)
-        with MySQLClient(database='worlin') as client:
-            # 直接自动提交，不需要手动 commit
-            client.execute_sync("UPDATE daily_report SET `desc` = 'auto_commit_test' WHERE id = 1", auto_commit=True)
-            print("SQL已自动提交")
-
-    def test_sqlbuilder_operations():
-        # 示例8：SQLBuilder 支持的操作演示
-        print("\n" + "=" * 50)
-        print("示例8：SQLBuilder 支持的操作演示")
-        print("=" * 50)
-
-        # UPDATE 操作
-        print("\n--- UPDATE 操作 ---")
-        update_sql = SQLBuilder('daily_report').update({'desc': 'testing', 'status': 'pending'}).where('id = %s', 1).to_sql()
-        print(f"UPDATE SQL: {update_sql[0]}, 参数: {update_sql[1]}")
-
-        # INSERT 操作
-        print("\n--- INSERT 操作（单条）---")
-        insert_sql = SQLBuilder('daily_report').insert({'desc': 'new record', 'status': 'new'}).to_sql()
-        print(f"INSERT SQL: {insert_sql[0]}, 参数: {insert_sql[1]}")
-
-        print("\n--- INSERT 操作（多条）---")
-        insert_multi_sql = SQLBuilder('daily_report').insert([
-            {'desc': 'record1', 'status': 'new'},
-            {'desc': 'record2', 'status': 'new'}
-        ]).to_sql()
-        print(f"INSERT SQL: {insert_multi_sql[0]}, 参数: {insert_multi_sql[1]}")
-
-        # DELETE 操作
-        print("\n--- DELETE 操作 ---")
-        delete_sql = SQLBuilder('daily_report').delete().where('status = %s', 'test').to_sql()
-        print(f"DELETE SQL: {delete_sql[0]}, 参数: {delete_sql[1]}")
-
-        # SELECT 操作（复杂查询）
-        print("\n--- SELECT 操作（复杂查询）---")
-        select_sql = SQLBuilder('daily_report')\
-            .select('id', 'desc', 'status')\
-            .where('status = %s', 'done')\
-            .order_by('id DESC')\
-            .limit(10)\
-            .to_sql()
-        print(f"SELECT SQL: {select_sql[0]}, 参数: {select_sql[1]}")
-
-    # 运行测试
-    # test_simple_query()
-    test_ping()
-    # test_create_database()
-    # test_use_backticks()
-    # test_use_sqlbuilder()
-    # test_trans_success()
-    # test_trans_fail()
-    # test_auto_commit()
-    #
-    # test_sqlbuilder_operations()
+if __name__ == '__main__' :
+    _sql = SQLBuilder('daily_report').where('id > 1').to_sql()
+    print(str(_sql))
+    r = MySQLClient().execute_sync(_sql[0], _sql[1])
+    print(r)

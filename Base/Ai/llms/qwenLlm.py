@@ -1,9 +1,12 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Generator, List
+import logging
 
 from Base.Ai.base.baseEnum import LLMTypeEnum
 from Base.Ai.base.baseLlm import BaseLlm
 from Base.Ai.base.baseSetting import DashScopeConfig
 from Base import settings
+
+logger = logging.getLogger(__name__)
 
 
 # noinspection PyTypeChecker
@@ -30,12 +33,12 @@ class QwenLlm(BaseLlm):
     }
 
     def __init__(
-        self,
-        api_key: str = None,
-        base_url: str = None,
-        model: str = None,
-        config: Optional[DashScopeConfig] = None,
-        **default_params: Any
+            self,
+            api_key: str = None,
+            base_url: str = None,
+            model: str = None,
+            config: Optional[DashScopeConfig] = None,
+            **default_params: Any
     ):
         """
         初始化 Qwen 模型
@@ -65,7 +68,7 @@ class QwenLlm(BaseLlm):
         self.model = model or settings.dashscope.default_model
         self._api_key = api_key
         self._base_url = base_url
-        self.init_openai_client(api_key=api_key, base_url=base_url, logger_name=__name__)
+        self.init_openai_client(api_key=api_key, base_url=base_url)
 
     def init_model(self):
         """初始化模型（已通过 init_openai_client 实现）"""
@@ -91,18 +94,109 @@ class QwenLlm(BaseLlm):
         """
         return True
 
+    def _prepare_params(self, **kwargs: Any) -> Dict[str, Any]:
+        kwargs = super()._prepare_params(**kwargs)
+        if "enable_thinking" in kwargs:
+            if kwargs.get("enable_thinking", False):
+                kwargs['stream'] = True
+                # kwargs['stream_options'] = {"include_usage": True}
+            extra_body = {
+                "enable_thinking": kwargs.get("enable_thinking", False)
+            }
+            del kwargs["enable_thinking"]
+            return {**kwargs, "extra_body": extra_body}
+        else:
+            return kwargs
+
+    def _handle_stream_with_thinking(self, stream) -> Generator[Dict[str, str], None, None]:
+        """
+        处理带思考过程的流式响应
+
+        Args:
+            stream: 流式响应对象
+
+        Yields:
+            字典，包含:
+            - type: "reasoning" 或 "content"
+            - content: 对应的内容
+        """
+        reasoning_content = ""  # 完整思考过程
+        answer_content = ""  # 完整回复
+        is_answering = False  # 是否进入回复阶段
+
+        for chunk in stream:
+            if not chunk.choices:
+                # 处理 usage 信息
+                if hasattr(chunk, 'usage') and chunk.usage:
+                    logger.debug(f"Stream Usage: {chunk.usage}")
+                continue
+
+            delta = chunk.choices[0].delta
+
+            # 处理思考过程
+            if hasattr(delta, "reasoning_content") and delta.reasoning_content is not None:
+                if not is_answering:
+                    logger.debug(f"Thinking 片段: {delta.reasoning_content[:50]}...")
+                reasoning_content += delta.reasoning_content
+                yield {"type": "reasoning", "content": delta.reasoning_content}
+
+            # 处理回复内容
+            if hasattr(delta, "content") and delta.content:
+                if not is_answering:
+                    is_answering = True
+                    logger.debug("进入回复阶段")
+                    yield {"type": "separator"}  # 标记从思考转到回复
+                logger.debug(f"Content 片段: {delta.content[:50]}...")
+                answer_content += delta.content
+                yield {"type": "content", "content": delta.content}
+
+    def invoke(
+        self,
+        prompt: str,
+        stream: bool = False,
+        **kwargs: Any
+    ):
+        """
+        同步调用模型（重写基类方法以支持思考过程）
+
+        Args:
+            prompt: 提示文本
+            stream: 是否使用流式输出（默认 False）
+            **kwargs: 额外参数（会覆盖默认配置），支持 enable_thinking
+
+        Returns:
+            - 非思考模式：与基类相同
+            - 思考模式（enable_thinking=True 且 stream=True）：生成器，返回 {"type": "reasoning"/"content"/"separator", "content": "..."}
+        """
+        enable_thinking = kwargs.pop("enable_thinking", False)
+
+        if enable_thinking and stream:
+            # 思考模式：强制使用流式
+            kwargs["enable_thinking"] = True
+            params = self._prepare_params(**kwargs)
+            response = self.model_client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                **params
+            )
+            return self._handle_stream_with_thinking(response)
+        else:
+            # 调用基类方法
+            if enable_thinking:
+                kwargs["enable_thinking"] = enable_thinking
+            return super().invoke(prompt, stream=stream, **kwargs)
+
 
 # =========================
 # 便捷函数
 # =========================
 
 def create_qwen_llm(
-    api_key: str = None,
-    base_url: str = None,
-    model: str = None,
-    temperature: float = None,
-    max_tokens: int = None,
-    **kwargs: Any
+        api_key: str = None,
+        base_url: str = None,
+        model: str = None,
+        temperature: float = None,
+        max_tokens: int = None,
+        **kwargs: Any
 ) -> QwenLlm:
     """
     便捷函数：创建 Qwen LLM 实例
@@ -150,8 +244,20 @@ if __name__ == '__main__':
     for k, v in info.items():
         print(f"{k}: {v}")
 
-    print("\n=== 测试简单调用 ===")
-    res = llm.invoke("讲一个笑话")
+    # print("\n=== 测试思考模式 ===")
+    # res = llm.invoke("讲一个笑话", enable_thinking=True, model="qwen-plus", stream=True)
+    # print("\n" + "=" * 20 + "思考过程" + "=" * 20)
+    # for chunk in res:
+    #     if chunk["type"] == "reasoning":
+    #         print(chunk["content"], end="", flush=True)
+    #     elif chunk["type"] == "separator":
+    #         print("\n" + "=" * 20 + "完整回复" + "=" * 20)
+    #     elif chunk["type"] == "content":
+    #         print(chunk["content"], end="", flush=True)
+    # print()  # 换行
+
+    print("\n=== 测试非思考模式 ===")
+    res = llm.invoke("讲一个笑话", model="qwen-plus")
     print(res)
 
     # print("\n=== 测试对话模式 ===")
@@ -166,4 +272,3 @@ if __name__ == '__main__':
     # for chunk in llm.stream("请写一首关于春天的诗"):
     #     print(chunk, end="", flush=True)
     # print()
-

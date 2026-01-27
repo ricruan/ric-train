@@ -1,12 +1,15 @@
 from abc import abstractmethod, ABC
 from typing import Any, Dict, List, Generator, AsyncGenerator, Optional, Union, Type
 from openai import OpenAI, AsyncOpenAI
+from openai.types.chat import ChatCompletionUserMessageParam, ChatCompletionMessageParam
 
 from Base.Ai.base.baseEnum import LLMTypeEnum
 from Base.Ai.base.baseSetting import LLMConfig
 from Base import settings
 import logging
 
+
+logger = logging.getLogger(__name__)
 
 class BaseLlm(ABC):
     """
@@ -35,8 +38,8 @@ class BaseLlm(ABC):
         self.model = model_name  # 用于兼容子类
         self.model_type: Optional[LLMTypeEnum] = model_type
         self.config = config
-        self.model_client = None
-        self.async_model_client = None
+        self.model_client :Optional[OpenAI] = None
+        self.async_model_client :Optional[AsyncOpenAI]= None
 
         # 合并配置参数和默认参数
         if config:
@@ -65,10 +68,9 @@ class BaseLlm(ABC):
         """
         try:
             params = self._prepare_params(**kwargs)
-            params.setdefault("model", self.model_name)
 
             response = self.model_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
+                messages=[ChatCompletionUserMessageParam(content=prompt,role='user')],
                 **params
             )
 
@@ -94,13 +96,11 @@ class BaseLlm(ABC):
 
         Returns:
             模型返回的文本
-
         Raises:
             Exception: 调用失败时抛出异常
         """
         try:
             params = self._prepare_params(**kwargs)
-            params.setdefault("model", self.model_name)
 
             response = await self.async_model_client.chat.completions.create(
                 messages=[{"role": "user", "content": prompt}],
@@ -139,7 +139,6 @@ class BaseLlm(ABC):
         """
         try:
             params = self._prepare_params(**kwargs)
-            params.setdefault("model", self.model_name)
 
             response = self.model_client.chat.completions.create(
                 messages=messages,
@@ -178,7 +177,6 @@ class BaseLlm(ABC):
         """
         try:
             params = self._prepare_params(**kwargs)
-            params.setdefault("model", self.model_name)
 
             response = await self.async_model_client.chat.completions.create(
                 messages=messages,
@@ -213,7 +211,6 @@ class BaseLlm(ABC):
         """
         try:
             params = self._prepare_params(**kwargs)
-            params.setdefault("model", self.model_name)
             params["stream"] = True
 
             stream = self.model_client.chat.completions.create(
@@ -253,7 +250,6 @@ class BaseLlm(ABC):
         """
         try:
             params = self._prepare_params(**kwargs)
-            params.setdefault("model", self.model_name)
             params["stream"] = True
 
             stream = await self.async_model_client.chat.completions.create(
@@ -300,21 +296,19 @@ class BaseLlm(ABC):
             "supports_streaming": self.supports_streaming,
         }
 
-    def init_openai_client(self, api_key: str, base_url: str, logger_name: str = "Llm"):
+    def init_openai_client(self, api_key: str, base_url: str):
         """
         初始化 OpenAI 兼容客户端（同步和异步）
 
         Args:
             api_key: API 密钥
             base_url: API 基础 URL
-            logger_name: 日志记录器名称
         """
         timeout = self.default_params.get('timeout', settings.llm.timeout if hasattr(settings, 'llm') else 30.0)
 
         self.model_client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
         self.async_model_client = AsyncOpenAI(api_key=api_key, base_url=base_url, timeout=timeout)
 
-        logger = logging.getLogger(logger_name)
         logger.info(
             f"模型初始化成功，"
             f"模型: {self.model_name}, "
@@ -372,7 +366,7 @@ class BaseLlm(ABC):
 
     def _prepare_params(self, **kwargs: Any) -> Dict[str, Any]:
         """
-        准备调用参数
+        准备调用参数（common 私有部分）
 
         合并默认参数和传入参数，并过滤掉 None 值。
 
@@ -388,4 +382,6 @@ class BaseLlm(ABC):
         # 过滤掉 None 值和不必要的参数
         params = {k: v for k, v in params.items() if v is not None}
 
+        params.setdefault("model", self.model_name)
+        logger.info(f"调用参数: {params}")
         return params

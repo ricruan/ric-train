@@ -1,15 +1,19 @@
 import logging
+import os
 
 import redis
 import threading
 from typing import Optional, List, Generator
-
-from Base.Config.setting import settings
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
+load_dotenv()
 
-# 从 settings 获取 Redis 配置
-redis_config = settings.redis.model_dump()
+# 读取 Redis 配置
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_DB = int(os.getenv("REDIS_DB", 0))
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
 
 
 class RedisClient:
@@ -21,38 +25,25 @@ class RedisClient:
     _instance: Optional['RedisClient'] = None
     _lock = threading.Lock()
 
-    def __new__(
-        cls,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
-        db: Optional[int] = None,
-        password: Optional[str] = None,
-        decode_responses: bool = True
-    ):
+    def __new__(cls, host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, decode_responses=True):
         """
         实现单例模式，确保全局只有一个 RedisClient 实例。
         如果实例已存在，则忽略传入的参数，直接返回现有实例。
         """
         if cls._instance is None:
             with cls._lock:
+                # 双重检查锁定，确保线程安全
                 if cls._instance is None:
                     cls._instance = super(RedisClient, cls).__new__(cls)
                     cls._instance._initialized = False
-                    cls._instance.host = host or redis_config.get('host')
-                    cls._instance.port = port or redis_config.get('port')
-                    cls._instance.db = db or redis_config.get('db')
-                    cls._instance.password = password or redis_config.get('password')
+                    cls._instance.host = host
+                    cls._instance.port = port
+                    cls._instance.db = db
+                    cls._instance.password = password
                     cls._instance.decode_responses = decode_responses
         return cls._instance
 
-    def __init__(
-        self,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
-        db: Optional[int] = None,
-        password: Optional[str] = None,
-        decode_responses: bool = True
-    ):
+    def __init__(self, host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, decode_responses=True):
         """
         初始化 Redis 连接池和客户端。
         注意：由于是单例，__init__ 可能会被多次调用，但连接只创建一次。
@@ -66,18 +57,18 @@ class RedisClient:
 
             # 创建连接池
             self.connection_pool = redis.ConnectionPool(
-                host=self.host,
-                port=self.port,
-                db=self.db,
-                password=self.password,
-                decode_responses=self.decode_responses,
-                max_connections=20
+                host=host,
+                port=port,
+                db=db,
+                password=password,
+                decode_responses=decode_responses,  # 确保获取的字符串是 str 而不是 bytes
+                max_connections=20  # 可根据需要调整
             )
             # 创建客户端实例
             self.client = redis.Redis(connection_pool=self.connection_pool)
             if self.ping():
                 self._initialized = True
-                logger.info(f"RedisClient 单例已初始化，连接到 {self.host}:{self.port}")
+                logger.error(f"RedisClient 单例已初始化，连接到 {self.host}:{self.port}")
 
     def set(self, key: str, value: str, ex: int = None) -> bool:
         """
@@ -89,10 +80,9 @@ class RedisClient:
         """
         try:
             self.client.set(key, value, ex=ex)
-            logger.info(f"设置键 {key} 成功，过期时间: {ex}秒")
             return True
         except redis.RedisError as e:
-            logger.error(f"设置键 {key} 失败: {e}")
+            print(f"设置键 {key} 失败: {e}")
             return False
 
     def get(self, key: str) -> Optional[str]:
@@ -226,42 +216,43 @@ redis_client = RedisClient()
 
 # --- 使用示例 ---
 if __name__ == "__main__":
-    # 获取单例实例（使用 settings 中的默认配置）
+    # 获取单例实例（第一次调用会创建连接）
+    # 后续调用即使参数不同，也会返回同一个实例
     redis_client1 = RedisClient()
 
     # 再次获取，仍然是同一个实例
     redis_client2 = RedisClient(host="localhost", port=6379, db=0, password=None)
-    logger.info(f"redis_client1 is redis_client2: {redis_client1 is redis_client2}")  # 输出: True
+    print(f"redis_client1 is redis_client2: {redis_client1 is redis_client2}")  # 输出: True
 
     # 测试连接
     if redis_client1.ping():
-        logger.info("Redis 连接成功！")
+        print("Redis 连接成功！")
 
         # 基本操作
         redis_client1.set("name", "Alice", ex=3600)
-        logger.info(f"获取 name: {redis_client1.get('name')}")
+        print("获取 name:", redis_client1.get("name"))
 
         redis_client1.update("name", "Bob")
-        logger.info(f"更新后 name: {redis_client1.get('name')}")
+        print("更新后 name:", redis_client1.get("name"))
 
         # 模糊查询 (谨慎使用)
-        logger.info(f"所有键: {redis_client1.keys('*')}")
-        logger.info(f"以 'name' 开头的键: {redis_client1.keys('name*')}")
+        print("所有键:", redis_client1.keys("*"))
+        print("以 'name' 开头的键:", redis_client1.keys("name*"))
 
         # 使用推荐的 SCAN 方式进行模糊查询
-        logger.info("使用 SCAN 查询以 'name' 开头的键:")
+        print("使用 SCAN 查询以 'name' 开头的键:")
         for key in redis_client1.scan_keys_generator("name*"):
-            logger.info(f"  - {key}")
+            print(f"  - {key}")
 
         # 模糊删除 (谨慎使用)
         # redis_client1.fuzzy_delete("temp:*")  # 删除所有以 temp: 开头的键
 
         # 安全的模糊删除 (推荐)
         # deleted = redis_client1.fuzzy_delete_safe("temp:*")
-        # logger.info(f"安全删除了 {deleted} 个键")
+        # print(f"安全删除了 {deleted} 个键")
 
         # 删除单个键
         if redis_client1.delete("name"):
-            logger.info("键 'name' 已删除")
+            print("键 'name' 已删除")
     else:
-        logger.error("无法连接到 Redis，请检查服务是否运行。")
+        print("无法连接到 Redis，请检查服务是否运行。")
