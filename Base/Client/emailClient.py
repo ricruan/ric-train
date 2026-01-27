@@ -7,9 +7,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
 import os
 
-import dotenv
+from Base.Config.setting import settings
 
-dotenv.load_dotenv()
 
 # 获取项目根目录的绝对路径
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -29,7 +28,7 @@ def send_email(
     receiver_emails,
     subject,
     body,
-    sender_password = os.getenv('EMAIL_PASSWORD'),
+    sender_password = settings.email.password,
     smtp_server: str = 'smtp.qq.com',
     smtp_port: int = 465,
     is_html=False,

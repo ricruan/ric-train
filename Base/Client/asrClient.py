@@ -4,12 +4,14 @@ import dashscope
 from typing import Tuple, Any
 import concurrent.futures
 
+from Base.Config.setting import settings
+
 logger = logging.getLogger(__name__)
 
 class AsrClient:
 
     def __init__(self):
-        self.ds_api_url = os.getenv('DSC_API_URL', 'https://dashscope.aliyuncs.com/api/v1')
+        self.ds_api_url = settings.dashscope.api_url
 
     @staticmethod
     def _get_usr_msg(audio_file_path: str):

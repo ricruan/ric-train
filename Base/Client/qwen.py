@@ -1,18 +1,16 @@
 import logging
-import os
-
-from dotenv import load_dotenv
 from langchain_community.chat_models.tongyi import ChatTongyi
 from langchain_core.messages import HumanMessage, SystemMessage
 from openai import OpenAI
 
-load_dotenv()
+from Base.Config.setting import settings
+
 logger = logging.getLogger(__name__)
 
 client = OpenAI(
     # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx"
-    api_key=os.getenv("DASHSCOPE_API_KEY"),
-    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    api_key=settings.dashscope.api_key,
+    base_url=settings.dashscope.base_url,
 )
 
 
@@ -20,7 +18,7 @@ client = OpenAI(
 chatLLM = ChatTongyi(
     model="qwen3-max",
     streaming=True,
-    api_key= os.getenv("DASHSCOPE_API_KEY")
+    api_key= settings.dashscope.api_key,
 )
 
 
@@ -59,7 +57,7 @@ def ez_llm(sys_msg: str, usr_msg: str):
 if __name__ == '__main__':
     # res = chatLLM.invoke([HumanMessage(content="hi")])
     # print(res.content)
-    res = ez_invoke(sys_msg="you are an evil ai assistant：\n",usr_msg='你好,给我讲个地狱笑话')
+    res = ez_llm(sys_msg="you are an evil ai assistant：\n",usr_msg='你好,给我讲个地狱笑话')
     print(res)
     # res = chatLLM.stream([HumanMessage(content="1 + 1 = ?")])
     # for r in res:

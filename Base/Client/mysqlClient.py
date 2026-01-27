@@ -1,4 +1,5 @@
 import time
+import logging
 
 import pymysql
 import asyncio
@@ -6,16 +7,13 @@ from typing import Any, List, Optional, Dict
 from dotenv import load_dotenv
 import os
 
+from Base.Config.setting import settings
+
+logger = logging.getLogger(__name__)
+
 load_dotenv()  # 自动加载 .env 文件
 
-db_config = {
-    'host': os.getenv('DB_HOST'),
-    'port': int(os.getenv('DB_PORT')),
-    'user': os.getenv('DB_USER'),
-    'password': os.getenv('DB_PASSWORD'),
-    'database': os.getenv('DB_NAME'),
-    'charset': os.getenv('DB_CHARSET', 'utf8mb4')
-}
+db_config = settings.mysql.model_dump()
 
 
 class MySQLClient:
@@ -29,12 +27,12 @@ class MySQLClient:
         charset: str = None,
         max_retries: int = 1
     ):
-        self.host = host or db_config['host']
-        self.port = port or db_config['port']
-        self.user = user or db_config['user']
-        self.password = password or db_config['password']
-        self.database = database or db_config['database']
-        self.charset = charset or db_config['charset']
+        self.host = host or db_config.get('host')
+        self.port = port or db_config.get('port')
+        self.user = user or db_config.get('user')
+        self.password = password or db_config.get('password')
+        self.database = database or db_config.get('database')
+        self.charset = charset or db_config.get('charset')
         self._connection: Optional[pymysql.Connection] = None
         self.max_retries = max_retries
 
@@ -62,13 +60,17 @@ class MySQLClient:
         """
         同步执行 SQL 查询，并增加了自动重连和重试逻辑。
         """
+        logger.info(f"执行SQL: {sql}")
+        if params:
+            logger.info(f"参数: {params}")
+
         # 尝试次数 = 1次初始尝试 + max_retries 次重试
         for attempt in range(self.max_retries + 1):
             try:
                 # 检查连接是否存在或是否已关闭
                 if self._connection is None or not self._connection.open:
                     if self._connection and not self._connection.open:
-                        print("连接不存在或已关闭，正在重新连接...")
+                        logger.warning("连接不存在或已关闭，正在重新连接...")
                     self.connect()
 
                 # *** 核心改动：在执行前检查连接活性 ***
@@ -78,18 +80,23 @@ class MySQLClient:
                 with self._connection.cursor(pymysql.cursors.DictCursor) as cursor:
                     cursor.execute(sql, params or ())
                     if sql.strip().upper().startswith("SELECT"):
-                        return cursor.fetchall()
+                        result = cursor.fetchall()
+                        # 打印查询结果统计信息
+                        logger.info(f"查询结果总条数: {len(result)}")
+                        return result
                     else:
-                        return [{"affected_rows": cursor.rowcount}]
+                        affected_rows = cursor.rowcount
+                        logger.info(f"影响行数: {affected_rows}")
+                        return [{"affected_rows": affected_rows}]
 
             except pymysql.err.OperationalError as e:
                 # 捕获到操作错误（通常是连接问题）
-                print(f"执行时捕获到连接错误: {e}. 尝试次数 {attempt + 1}/{self.max_retries + 1}")
+                logger.error(f"执行时捕获到连接错误: {e}. 尝试次数 {attempt + 1}/{self.max_retries + 1}")
                 self.close()  # 彻底关闭失效的连接
 
                 # 如果这已经是最后一次尝试，则将异常抛出
                 if attempt >= self.max_retries:
-                    print("已达到最大重试次数，抛出异常。")
+                    logger.error("已达到最大重试次数，抛出异常。")
                     raise e
 
                 # 等待一小段时间再重试，避免立即重连给数据库造成压力
@@ -97,7 +104,7 @@ class MySQLClient:
 
                 # 捕获其他 pymysql 错误（如语法错误）并直接抛出，不进行重试
             except pymysql.err.MySQLError as e:
-                print(f"捕获到非连接相关的SQL错误: {e}")
+                logger.error(f"捕获到非连接相关的SQL错误: {e}")
                 raise e
         return None
 
@@ -278,6 +285,4 @@ class SQLBuilder:
 
 if __name__ == '__main__' :
     _sql = SQLBuilder('daily_report').where('id > 1').to_sql()
-    print(str(_sql))
-    r = MySQLClient().execute_sync(_sql[0], _sql[1])
-    print(r)
+    r = MySQLClient(database='worlin').execute_sync(_sql[0], _sql[1])

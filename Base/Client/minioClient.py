@@ -7,7 +7,7 @@ from datetime import timedelta
 from minio import Minio
 from minio.error import S3Error
 from typing import List, Tuple, Dict
-
+from Base.Config.setting import settings
 from Base.Meta.singletonMeta import SingletonMeta
 
 logger = logging.getLogger(__name__)
@@ -20,9 +20,9 @@ class MinioClient(metaclass=SingletonMeta):
         if hasattr(self, 'client'):
             return  # 已初始化过，跳过
 
-        self.endpoint = endpoint or os.getenv('MINIO_ENDPOINT')
-        access_key = access_key or os.getenv('MINIO_ACCESS_KEY')
-        secret_key = secret_key or os.getenv('MINIO_SECRET_KEY')
+        self.endpoint = endpoint or settings.minio.endpoint
+        access_key = access_key or settings.minio.access_key
+        secret_key = secret_key or settings.minio.secret_key
 
         try:
             self.client = Minio(
