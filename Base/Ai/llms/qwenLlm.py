@@ -5,7 +5,7 @@ from Base.Ai.base import UserMessages, SystemMessages
 from Base.Ai.base.baseEnum import LLMTypeEnum
 from Base.Ai.base.baseLlm import BaseLlm
 from Base.Ai.base.baseSetting import DashScopeConfig
-from Base import settings
+from Base.Config.setting import settings
 
 logger = logging.getLogger(__name__)
 

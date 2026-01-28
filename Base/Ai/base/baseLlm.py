@@ -5,7 +5,7 @@ from openai.types.chat import ChatCompletionUserMessageParam
 
 from Base.Ai.base.baseEnum import LLMTypeEnum
 from Base.Ai.base.baseSetting import LLMConfig
-from Base import settings
+from Base.Config.setting import settings
 import logging
 from Base.Ai.base import UserMessages
 

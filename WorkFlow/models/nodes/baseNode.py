@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Optional, Callable
 
 from Base.RicUtils.dataUtils import remove_none
-from WorkFlow.base.enum import NodeTypeEnum
+from WorkFlow.base._enum import NodeTypeEnum
 from abc import ABC
 from langgraph.graph import StateGraph, START, END
 

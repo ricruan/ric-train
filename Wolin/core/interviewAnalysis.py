@@ -16,7 +16,7 @@ from Base.RicUtils.pdfUtils import extract_pdf_text
 from Base.RicUtils.redisUtils import cache_with_params
 from Wolin.service import get_email_service, get_asr_service, get_minio_service
 from Wolin.service.emailService import EmailService
-from Wolin.prompt.insertviewPrompt import COMBINE_SLICE, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
+from Wolin.prompt.insertviewPrompt import COMBINE_SLICE_PROMPT, ANALYSIS_START_PROMPT, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, \
     CORE_QA_ANALYSIS_PROMPT, render, INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, \
     RESUME_JSON_EXTRACT_PROMPT, RESUME_ANALYSIS_PROMPT
 
@@ -332,7 +332,7 @@ class InterviewAnalysis:
 
     @staticmethod
     def combine_slice_by_llm(slice_list: list[str] | str, resume_info: dict):
-        return ez_llm(sys_msg=render(COMBINE_SLICE, {"resume_info": resume_info}), usr_msg=str(slice_list))
+        return ez_llm(sys_msg=render(COMBINE_SLICE_PROMPT, {"resume_info": resume_info}), usr_msg=str(slice_list))
 
 
 if __name__ == "__main__":

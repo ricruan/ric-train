@@ -1,4 +1,10 @@
+import logging
 from threading import Lock
+import time
+from functools import wraps
+from typing import Callable, Any
+
+logger = logging.getLogger(__name__)
 
 class EarlyStop(Exception):
     """早停,此异常用于提前结束函数，非业务或功能异常"""
@@ -25,6 +31,27 @@ def singleton(cls):
     return get_instance
 
 
+def timing_log(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    装饰器：在函数执行前后打印开始时间、结束时间和运行耗时。
+    """
+
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        start_time = time.time()
+        start_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(start_time))
+        logger.debug(f"[{func.__name__}] 开始执行时间: {start_str}")
+
+        try:
+            result = func(*args, **kwargs)
+            return result
+        finally:
+            end_time = time.time()
+            end_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(end_time))
+            elapsed = end_time - start_time
+            logger.debug(f"[{func.__name__}] 结束执行时间: {end_str} | 耗时: {elapsed:.4f} 秒")
+
+    return wrapper
 
 def params_handle_4c(before_func):
     """

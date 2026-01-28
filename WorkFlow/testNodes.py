@@ -17,11 +17,12 @@ def say_bye(state: BaseState):
 
 @graph_node
 def say_1(state: BaseState):
+    state.ric_id = 'say_1'
     print("12323231 v111111")
 
 @graph_node
 def say_2(state: BaseState):
-    print(2)
+    return {'name': 'say_2'}
 
 @graph_node
 def say_3(state: BaseState):

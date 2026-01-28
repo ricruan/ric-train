@@ -3,21 +3,23 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 
+from Base import default_qwen_llm
 from Base.Ai.base.baseLlm import BaseLlm
-from Base.Ai.llms.qwenLlm import create_qwen_llm
 
 
 class BaseState(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    # id: str = Field(None, description='唯一标识')
+    ric_id: str = Field(None, description='唯一标识')
     name: str = Field('', description='工作流名称')
     early_stop_flag: bool = Field(False, description='是否提前停止')
-    default_model: BaseLlm = Field(None, description='默认模型')
 
     def __init__(self, /, **data: Any):
         super().__init__(**data)
-        self.default_model = create_qwen_llm()
+
+    @property
+    def default_model(self) -> BaseLlm:
+        return default_qwen_llm
 
     @staticmethod
     def find_me(*args, **kwargs) -> Optional[BaseModel]:

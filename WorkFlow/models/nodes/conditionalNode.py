@@ -1,5 +1,5 @@
 from Base.RicUtils.dataUtils import seq_safe_get
-from WorkFlow.base.enum import NodeTypeEnum
+from WorkFlow.base._enum import NodeTypeEnum
 from WorkFlow.models.nodes.baseNode import BaseNode
 
 

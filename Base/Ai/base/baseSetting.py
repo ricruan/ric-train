@@ -6,7 +6,7 @@ LLM 配置类
 from dataclasses import dataclass, field
 from typing import Optional, Any, Dict
 
-from Base import settings
+from Base.Config.setting import settings
 
 
 @dataclass

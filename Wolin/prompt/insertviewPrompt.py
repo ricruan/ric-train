@@ -4,7 +4,7 @@ import logging
 from Base.Client.qwen import ez_llm
 from jinja2 import Template
 
-COMBINE_SLICE="""
+COMBINE_SLICE_PROMPT= """
 ## 背景
 处理面试录音的ASR转化文本，它被滑动切片成多份文本，需要进行合并，合并过程中需要区分出面试官和求职者。
 
