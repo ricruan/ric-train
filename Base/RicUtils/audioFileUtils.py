@@ -3,10 +3,12 @@ import os
 import subprocess
 import tempfile
 import uuid
+
+from Base.Config.setting import settings
 from Base.RicUtils.decoratorUtils import  after_exec_4c, params_handle_4c
 
 logger = logging.getLogger(__name__)
-FFMPEG_PATH = rf"{os.getenv('FFMPEG_PATH')}"
+FFMPEG_PATH = settings.ffmpeg.path
 
 
 class AudioFileHandler:
@@ -186,7 +188,7 @@ class AudioFileHandler:
             # 段时长
             segment_duration = actual_end - actual_start
 
-            logger.info(
+            logger.debug(
                 f"[分段 {segment_index}] 从 {actual_start:.2f}s 到 {actual_end:.2f}s （时长：{segment_duration:.2f}s）")
 
             # 输出文件名

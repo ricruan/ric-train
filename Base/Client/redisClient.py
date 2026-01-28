@@ -68,7 +68,7 @@ class RedisClient:
             self.client = redis.Redis(connection_pool=self.connection_pool)
             if self.ping():
                 self._initialized = True
-                logger.error(f"RedisClient 单例已初始化，连接到 {self.host}:{self.port}")
+                logger.info(f"RedisClient 单例已初始化，连接到 {self.host}:{self.port}")
 
     def set(self, key: str, value: str, ex: int = None) -> bool:
         """

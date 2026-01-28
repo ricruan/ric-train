@@ -8,6 +8,7 @@ from functools import wraps
 def graph_node(func=None, *,is_default: bool = False):
     """
     如果节点函数忘记返回 修改内容,Here 会自动对比差异并返回差异部分进行更新
+    todo 目前不能存在对象，不然无法对比出差异
     :param func:
     :param is_default: 是否为需要初始化的基础默认节点
     :return:

@@ -1,7 +1,7 @@
 from typing import Any, Dict, Optional, Generator, List
 import logging
 
-from Base.Ai.base import UserMessages
+from Base.Ai.base import UserMessages, SystemMessages
 from Base.Ai.base.baseEnum import LLMTypeEnum
 from Base.Ai.base.baseLlm import BaseLlm
 from Base.Ai.base.baseSetting import DashScopeConfig
@@ -53,9 +53,9 @@ class QwenLlm(BaseLlm):
         """
         # 处理配置对象和默认参数
         api_key, base_url, model, default_params = super()._process_config(
-            api_key=api_key,
-            base_url=base_url,
-            model=model,
+            api_key=api_key or settings.dashscope.api_key,
+            base_url=base_url or settings.dashscope.base_url,
+            model=model or settings.dashscope.default_model,
             config=config,
             default_params=default_params,
             base_url_error_msg="未配置Qwen模型的Base_Url"
@@ -111,6 +111,38 @@ class QwenLlm(BaseLlm):
         else:
             return kwargs
 
+    @staticmethod
+    def _process_thinking_chunk(chunk, log_prefix: str):
+        """
+        处理思考模式的单个 chunk
+
+        Args:
+            chunk: 流式响应 chunk
+            log_prefix: 日志前缀（如 "Stream", "Async Stream"）
+
+        Yields:
+            字典 {"type": "reasoning"/"content", "content": "..."}
+        """
+        if not chunk.choices:
+            # 处理 usage 信息
+            if hasattr(chunk, 'usage') and chunk.usage:
+                logger.debug(f"{log_prefix} Usage: {chunk.usage}")
+            return
+
+        delta = chunk.choices[0].delta
+
+        # 处理思考过程
+        if hasattr(delta, "reasoning_content") and delta.reasoning_content is not None:
+            content = delta.reasoning_content
+            logger.debug(f"{log_prefix} Thinking 片段: {content[:50]}...")
+            yield {"type": "reasoning", "content": content}
+
+        # 处理回复内容
+        if hasattr(delta, "content") and delta.content:
+            content = delta.content
+            logger.debug(f"{log_prefix} Content 片段: {content[:50]}...")
+            yield {"type": "content", "content": content}
+
     def _handle_stream_response(self, stream) -> Generator:
         """
         重写基类的流式响应处理方法，支持思考过程
@@ -127,25 +159,7 @@ class QwenLlm(BaseLlm):
         if enable_thinking:
             # 思考模式：返回带类型的字典
             for chunk in stream:
-                if not chunk.choices:
-                    # 处理 usage 信息
-                    if hasattr(chunk, 'usage') and chunk.usage:
-                        logger.debug(f"Stream Usage: {chunk.usage}")
-                    continue
-
-                delta = chunk.choices[0].delta
-
-                # 处理思考过程
-                if hasattr(delta, "reasoning_content") and delta.reasoning_content is not None:
-                    content = delta.reasoning_content
-                    logger.debug(f"Thinking 片段: {content[:50]}...")
-                    yield {"type": "reasoning", "content": content}
-
-                # 处理回复内容
-                if hasattr(delta, "content") and delta.content:
-                    content = delta.content
-                    logger.debug(f"Content 片段: {content[:50]}...")
-                    yield {"type": "content", "content": content}
+                yield from self._process_thinking_chunk(chunk, "Stream")
         else:
             # 普通模式：调用基类的默认处理
             yield from super()._handle_stream_response(stream)
@@ -166,25 +180,8 @@ class QwenLlm(BaseLlm):
         if enable_thinking:
             # 思考模式：返回带类型的字典
             async for chunk in stream:
-                if not chunk.choices:
-                    # 处理 usage 信息
-                    if hasattr(chunk, 'usage') and chunk.usage:
-                        logger.debug(f"Async Stream Usage: {chunk.usage}")
-                    continue
-
-                delta = chunk.choices[0].delta
-
-                # 处理思考过程
-                if hasattr(delta, "reasoning_content") and delta.reasoning_content is not None:
-                    content = delta.reasoning_content
-                    logger.debug(f"Async Thinking 片段: {content[:50]}...")
-                    yield {"type": "reasoning", "content": content}
-
-                # 处理回复内容
-                if hasattr(delta, "content") and delta.content:
-                    content = delta.content
-                    logger.debug(f"Async Content 片段: {content[:50]}...")
-                    yield {"type": "content", "content": content}
+                for result in self._process_thinking_chunk(chunk, "Async Stream"):
+                    yield result
         else:
             # 普通模式：调用基类的默认处理
             async for chunk in super()._handle_async_stream_response(stream):
@@ -242,13 +239,12 @@ def create_qwen_llm(
 if __name__ == '__main__':
 
     # 示例：使用便捷函数创建
-    llm = create_qwen_llm()
+    llm = QwenLlm()
 
     print("=== 模型信息 ===")
     info = llm.get_model_info()
     for k, v in info.items():
         print(f"{k}: {v}")
-
 
     # 测试思考模式
     print("\n=== 测试思考模式 ===")
@@ -263,9 +259,10 @@ if __name__ == '__main__':
             print(chunk["content"], end="", flush=True)
     print()  # 换行
 
-    # # 测试非思考模式（非流式）
+    # 测试非思考模式（非流式）
     # print("\n=== 测试非思考模式（非流式）===")
-    # res = llm.invoke("讲一个笑话", model="qwen-plus")
+    # # res = llm.invoke("讲一个笑话", model="qwen-plus")
+    # res = llm.chat([SystemMessages("你是一个有帮助的助手"), UserMessages("请用一句话介绍Python")])
     # print(res)
     #
     # # 测试非思考模式（流式）

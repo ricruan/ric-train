@@ -3,8 +3,8 @@ Redis 缓存装饰器使用示例
 """
 import time
 import random
-from Client.redisClient import RedisClient
-from RicUtils.redisUtils import redis_cache, cache_result, cache_with_params
+from Base.Client.redisClient import RedisClient
+from Base.RicUtils.redisUtils import redis_cache, cache_result, cache_with_params
 
 # 初始化 Redis 客户端
 redis_client = RedisClient()
