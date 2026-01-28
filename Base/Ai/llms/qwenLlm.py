@@ -1,6 +1,7 @@
 from typing import Any, Dict, Optional, Generator, List
 import logging
 
+from Base.Ai.base import UserMessages
 from Base.Ai.base.baseEnum import LLMTypeEnum
 from Base.Ai.base.baseLlm import BaseLlm
 from Base.Ai.base.baseSetting import DashScopeConfig
@@ -97,93 +98,97 @@ class QwenLlm(BaseLlm):
     def _prepare_params(self, **kwargs: Any) -> Dict[str, Any]:
         kwargs = super()._prepare_params(**kwargs)
         if "enable_thinking" in kwargs:
-            if kwargs.get("enable_thinking", False):
+            enable_thinking = kwargs.get("enable_thinking", False)
+            if enable_thinking:
                 kwargs['stream'] = True
-                # kwargs['stream_options'] = {"include_usage": True}
             extra_body = {
-                "enable_thinking": kwargs.get("enable_thinking", False)
+                "enable_thinking": enable_thinking
             }
+            # 保存到 default_params 中，供后续使用
+            self.default_params['enable_thinking'] = enable_thinking
             del kwargs["enable_thinking"]
             return {**kwargs, "extra_body": extra_body}
         else:
             return kwargs
 
-    def _handle_stream_with_thinking(self, stream) -> Generator[Dict[str, str], None, None]:
+    def _handle_stream_response(self, stream) -> Generator:
         """
-        处理带思考过程的流式响应
+        重写基类的流式响应处理方法，支持思考过程
 
         Args:
             stream: 流式响应对象
 
         Yields:
-            字典，包含:
-            - type: "reasoning" 或 "content"
-            - content: 对应的内容
+            - 普通模式：文本片段（字符串）
+            - 思考模式：字典 {"type": "reasoning"/"content", "content": "..."}
         """
-        reasoning_content = ""  # 完整思考过程
-        answer_content = ""  # 完整回复
-        is_answering = False  # 是否进入回复阶段
+        enable_thinking = self.default_params.get('enable_thinking', False)
 
-        for chunk in stream:
-            if not chunk.choices:
-                # 处理 usage 信息
-                if hasattr(chunk, 'usage') and chunk.usage:
-                    logger.debug(f"Stream Usage: {chunk.usage}")
-                continue
+        if enable_thinking:
+            # 思考模式：返回带类型的字典
+            for chunk in stream:
+                if not chunk.choices:
+                    # 处理 usage 信息
+                    if hasattr(chunk, 'usage') and chunk.usage:
+                        logger.debug(f"Stream Usage: {chunk.usage}")
+                    continue
 
-            delta = chunk.choices[0].delta
+                delta = chunk.choices[0].delta
 
-            # 处理思考过程
-            if hasattr(delta, "reasoning_content") and delta.reasoning_content is not None:
-                if not is_answering:
-                    logger.debug(f"Thinking 片段: {delta.reasoning_content[:50]}...")
-                reasoning_content += delta.reasoning_content
-                yield {"type": "reasoning", "content": delta.reasoning_content}
+                # 处理思考过程
+                if hasattr(delta, "reasoning_content") and delta.reasoning_content is not None:
+                    content = delta.reasoning_content
+                    logger.debug(f"Thinking 片段: {content[:50]}...")
+                    yield {"type": "reasoning", "content": content}
 
-            # 处理回复内容
-            if hasattr(delta, "content") and delta.content:
-                if not is_answering:
-                    is_answering = True
-                    logger.debug("进入回复阶段")
-                    yield {"type": "separator"}  # 标记从思考转到回复
-                logger.debug(f"Content 片段: {delta.content[:50]}...")
-                answer_content += delta.content
-                yield {"type": "content", "content": delta.content}
+                # 处理回复内容
+                if hasattr(delta, "content") and delta.content:
+                    content = delta.content
+                    logger.debug(f"Content 片段: {content[:50]}...")
+                    yield {"type": "content", "content": content}
+        else:
+            # 普通模式：调用基类的默认处理
+            yield from super()._handle_stream_response(stream)
 
-    def invoke(
-        self,
-        prompt: str,
-        stream: bool = False,
-        **kwargs: Any
-    ):
+    async def _handle_async_stream_response(self, stream):
         """
-        同步调用模型（重写基类方法以支持思考过程）
+        重写基类的异步流式响应处理方法，支持思考过程
 
         Args:
-            prompt: 提示文本
-            stream: 是否使用流式输出（默认 False）
-            **kwargs: 额外参数（会覆盖默认配置），支持 enable_thinking
+            stream: 异步流式响应对象
 
-        Returns:
-            - 非思考模式：与基类相同
-            - 思考模式（enable_thinking=True 且 stream=True）：生成器，返回 {"type": "reasoning"/"content"/"separator", "content": "..."}
+        Yields:
+            - 普通模式：文本片段（字符串）
+            - 思考模式：字典 {"type": "reasoning"/"content", "content": "..."}
         """
-        enable_thinking = kwargs.pop("enable_thinking", False)
+        enable_thinking = self.default_params.get('enable_thinking', False)
 
-        if enable_thinking and stream:
-            # 思考模式：强制使用流式
-            kwargs["enable_thinking"] = True
-            params = self._prepare_params(**kwargs)
-            response = self.model_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                **params
-            )
-            return self._handle_stream_with_thinking(response)
+        if enable_thinking:
+            # 思考模式：返回带类型的字典
+            async for chunk in stream:
+                if not chunk.choices:
+                    # 处理 usage 信息
+                    if hasattr(chunk, 'usage') and chunk.usage:
+                        logger.debug(f"Async Stream Usage: {chunk.usage}")
+                    continue
+
+                delta = chunk.choices[0].delta
+
+                # 处理思考过程
+                if hasattr(delta, "reasoning_content") and delta.reasoning_content is not None:
+                    content = delta.reasoning_content
+                    logger.debug(f"Async Thinking 片段: {content[:50]}...")
+                    yield {"type": "reasoning", "content": content}
+
+                # 处理回复内容
+                if hasattr(delta, "content") and delta.content:
+                    content = delta.content
+                    logger.debug(f"Async Content 片段: {content[:50]}...")
+                    yield {"type": "content", "content": content}
         else:
-            # 调用基类方法
-            if enable_thinking:
-                kwargs["enable_thinking"] = enable_thinking
-            return super().invoke(prompt, stream=stream, **kwargs)
+            # 普通模式：调用基类的默认处理
+            async for chunk in super()._handle_async_stream_response(stream):
+                yield chunk
 
 
 # =========================
@@ -244,22 +249,33 @@ if __name__ == '__main__':
     for k, v in info.items():
         print(f"{k}: {v}")
 
-    # print("\n=== 测试思考模式 ===")
-    # res = llm.invoke("讲一个笑话", enable_thinking=True, model="qwen-plus", stream=True)
-    # print("\n" + "=" * 20 + "思考过程" + "=" * 20)
+
+    # 测试思考模式
+    print("\n=== 测试思考模式 ===")
+    res = llm.invoke("讲一个笑话", enable_thinking=True, model="qwen-plus", stream=True)
+    print("\n" + "=" * 20 + "思考过程" + "=" * 20)
+    for chunk in res:
+        if chunk["type"] == "reasoning":
+            print(chunk["content"], end="", flush=True)
+        elif chunk["type"] == "separator":
+            print("\n" + "=" * 20 + "完整回复" + "=" * 20)
+        elif chunk["type"] == "content":
+            print(chunk["content"], end="", flush=True)
+    print()  # 换行
+
+    # # 测试非思考模式（非流式）
+    # print("\n=== 测试非思考模式（非流式）===")
+    # res = llm.invoke("讲一个笑话", model="qwen-plus")
+    # print(res)
+    #
+    # # 测试非思考模式（流式）
+    # print("\n=== 测试非思考模式（流式）===")
+    # res = llm.invoke("讲一个笑话", model="qwen-plus", stream=True)
     # for chunk in res:
-    #     if chunk["type"] == "reasoning":
-    #         print(chunk["content"], end="", flush=True)
-    #     elif chunk["type"] == "separator":
-    #         print("\n" + "=" * 20 + "完整回复" + "=" * 20)
-    #     elif chunk["type"] == "content":
-    #         print(chunk["content"], end="", flush=True)
+    #     print(chunk, end="")
     # print()  # 换行
-
-    print("\n=== 测试非思考模式 ===")
-    res = llm.invoke("讲一个笑话", model="qwen-plus")
-    print(res)
-
+    #
+    # # 测试对话模式
     # print("\n=== 测试对话模式 ===")
     # messages = [
     #     {"role": "system", "content": "你是一个有帮助的助手"},
@@ -268,7 +284,9 @@ if __name__ == '__main__':
     # res = llm.chat(messages)
     # print(res)
     #
-    # print("\n=== 测试流式输出 ===")
-    # for chunk in llm.stream("请写一首关于春天的诗"):
-    #     print(chunk, end="", flush=True)
-    # print()
+    # # 测试对话模式（流式）
+    # print("\n=== 测试对话模式（流式）===")
+    # res = llm.chat(messages, stream=True)
+    # for chunk in res:
+    #     print(chunk, end="")
+    # print()  # 换行

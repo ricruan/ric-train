@@ -1,5 +1,6 @@
-from openai.types.chat import ChatCompletionUserMessageParam, ChatCompletionMessageParam
-
+from openai.types.chat import ChatCompletionUserMessageParam, ChatCompletionMessageParam, \
+    ChatCompletionAssistantMessageParam, ChatCompletionSystemMessageParam, ChatCompletionDeveloperMessageParam, \
+    ChatCompletionToolMessageParam, ChatCompletionFunctionMessageParam
 
 
 class BaseMessages:
@@ -9,24 +10,24 @@ class BaseMessages:
 
     @staticmethod
     def get_user_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionMessageParam(content=prompt, role="user", name=name)
+        return ChatCompletionUserMessageParam(content=prompt, role="user", name=name)
 
     @staticmethod
     def get_assistant_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionMessageParam(content=prompt, role="assistant", name=name)
+        return ChatCompletionAssistantMessageParam(content=prompt, role="assistant", name=name)
 
     @staticmethod
     def get_system_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionMessageParam(content=prompt, role="system", name=name)
+        return ChatCompletionSystemMessageParam(content=prompt, role="system", name=name)
 
     @staticmethod
     def get_developer_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionMessageParam(content=prompt, role="developer", name=name)
+        return ChatCompletionDeveloperMessageParam(content=prompt, role="developer", name=name)
 
     @staticmethod
     def get_tool_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionMessageParam(content=prompt, role="tool", name=name)
+        return ChatCompletionToolMessageParam(content=prompt, role="tool", name=name)
 
     @staticmethod
     def get_function_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionMessageParam(content=prompt, role="function", name=name)
+        return ChatCompletionFunctionMessageParam(content=prompt, role="function", name=name)

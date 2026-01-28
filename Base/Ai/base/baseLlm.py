@@ -1,15 +1,16 @@
 from abc import abstractmethod, ABC
 from typing import Any, Dict, List, Generator, AsyncGenerator, Optional, Union, Type
 from openai import OpenAI, AsyncOpenAI
-from openai.types.chat import ChatCompletionUserMessageParam, ChatCompletionMessageParam
+from openai.types.chat import ChatCompletionUserMessageParam
 
 from Base.Ai.base.baseEnum import LLMTypeEnum
 from Base.Ai.base.baseSetting import LLMConfig
 from Base import settings
 import logging
-
+from Base.Ai.base import UserMessages
 
 logger = logging.getLogger(__name__)
+
 
 class BaseLlm(ABC):
     """
@@ -19,11 +20,11 @@ class BaseLlm(ABC):
     """
 
     def __init__(
-        self,
-        model_name: str,
-        model_type: Optional[LLMTypeEnum] = None,
-        config: Optional[LLMConfig] = None,
-        **default_params: Any
+            self,
+            model_name: str,
+            model_type: Optional[LLMTypeEnum] = None,
+            config: Optional[LLMConfig] = None,
+            **default_params: Any
     ):
         """
         初始化 LLM 基类
@@ -38,8 +39,8 @@ class BaseLlm(ABC):
         self.model = model_name  # 用于兼容子类
         self.model_type: Optional[LLMTypeEnum] = model_type
         self.config = config
-        self.model_client :Optional[OpenAI] = None
-        self.async_model_client :Optional[AsyncOpenAI]= None
+        self.model_client: Optional[OpenAI] = None
+        self.async_model_client: Optional[AsyncOpenAI] = None
 
         # 合并配置参数和默认参数
         if config:
@@ -52,224 +53,215 @@ class BaseLlm(ABC):
     def init_model(self):
         pass
 
-    def invoke(self, prompt: str, **kwargs: Any) -> str:
+    def invoke(self, prompt: str, stream: bool = False, **kwargs: Any) -> Union[str, Generator[str, None, None]]:
         """
         同步调用模型
 
         Args:
             prompt: 提示文本
+            stream: 是否使用流式输出（默认 False）
             **kwargs: 额外参数（会覆盖默认配置）
 
         Returns:
-            模型返回的文本
+            流式模式: 生成器，逐个返回文本片段
+            非流式模式: 完整的响应文本
 
         Raises:
             Exception: 调用失败时抛出异常
         """
         try:
-            params = self._prepare_params(**kwargs)
-
+            params = self._prepare_params(**kwargs, stream=stream)
             response = self.model_client.chat.completions.create(
-                messages=[ChatCompletionUserMessageParam(content=prompt,role='user')],
+                messages=[ChatCompletionUserMessageParam(content=prompt, role='user')],
                 **params
             )
+            if stream:
 
-            content = response.choices[0].message.content
-            logging.getLogger(self.__class__.__name__).debug(
-                f"Invoke 响应: {content[:100] if content else 'empty'}..."
-            )
-            return content
+                return self._handle_stream_response(response)
+            else:
+                return self._handle_response(response)
 
         except Exception as e:
-            logging.getLogger(self.__class__.__name__).error(
+            logger.error(
                 f"Invoke 调用失败: {e}", exc_info=True
             )
             raise
 
-    async def ainvoke(self, prompt: str, **kwargs: Any) -> str:
+    async def ainvoke(self, prompt: str, stream: bool = False, **kwargs: Any) -> Union[str, AsyncGenerator[str, None]]:
         """
         异步调用模型
 
         Args:
             prompt: 提示文本
+            stream: 是否使用流式输出（默认 False）
             **kwargs: 额外参数（会覆盖默认配置）
 
         Returns:
-            模型返回的文本
+            流式模式: 异步生成器，逐个返回文本片段
+            非流式模式: 完整的响应文本
         Raises:
             Exception: 调用失败时抛出异常
         """
         try:
-            params = self._prepare_params(**kwargs)
-
+            params = self._prepare_params(**kwargs, stream=stream)
             response = await self.async_model_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
+                messages=[UserMessages(prompt=prompt)],
                 **params
             )
 
-            content = response.choices[0].message.content
-            logging.getLogger(self.__class__.__name__).debug(
-                f"AInvoke 响应: {content[:100] if content else 'empty'}..."
-            )
-            return content
+            if stream:
+                return self._handle_async_stream_response(response)
+            else:
+                return await self._handle_async_response(response)
 
         except Exception as e:
-            logging.getLogger(self.__class__.__name__).error(
+            logger.error(
                 f"AInvoke 调用失败: {e}", exc_info=True
             )
             raise
 
     def chat(
-        self,
-        messages: List[Union[Dict[str, str], Any]],
-        **kwargs: Any
-    ) -> str:
+            self,
+            messages: List[Union[Dict[str, str], Any]],
+            stream: bool = False,
+            **kwargs: Any
+    ) -> Union[str, Generator[str, None, None]]:
         """
         对话模式同步调用
 
         Args:
             messages: 消息列表，格式为 [{"role": "user", "content": "..."}]
+            stream: 是否使用流式输出（默认 False）
             **kwargs: 额外参数（会覆盖默认配置）
 
         Returns:
-            模型返回的文本
+            流式模式: 生成器，逐个返回文本片段
+            非流式模式: 完整的响应文本
 
         Raises:
             Exception: 调用失败时抛出异常
         """
         try:
-            params = self._prepare_params(**kwargs)
-
+            params = self._prepare_params(**kwargs, stream=stream)
             response = self.model_client.chat.completions.create(
                 messages=messages,
                 **params
             )
-
-            content = response.choices[0].message.content
-            logging.getLogger(self.__class__.__name__).debug(
-                f"Chat 响应: {content[:100] if content else 'empty'}..."
-            )
-            return content
+            if stream:
+                return self._handle_stream_response(response)
+            else:
+                return self._handle_response(response)
 
         except Exception as e:
-            logging.getLogger(self.__class__.__name__).error(
+            logger.error(
                 f"Chat 调用失败: {e}", exc_info=True
             )
             raise
 
     async def achat(
-        self,
-        messages: List[Union[Dict[str, str], Any]],
-        **kwargs: Any
-    ) -> str:
+            self,
+            messages: List[Union[Dict[str, str], Any]],
+            stream: bool = False,
+            **kwargs: Any
+    ) -> Union[str, AsyncGenerator[str, None]]:
         """
         对话模式异步调用
 
         Args:
             messages: 消息列表，格式为 [{"role": "user", "content": "..."}]
+            stream: 是否使用流式输出（默认 False）
             **kwargs: 额外参数（会覆盖默认配置）
 
         Returns:
-            模型返回的文本
+            流式模式: 异步生成器，逐个返回文本片段
+            非流式模式: 完整的响应文本
 
         Raises:
             Exception: 调用失败时抛出异常
         """
         try:
-            params = self._prepare_params(**kwargs)
-
+            params = self._prepare_params(**kwargs, stream=stream)
             response = await self.async_model_client.chat.completions.create(
                 messages=messages,
                 **params
             )
 
-            content = response.choices[0].message.content
-            logging.getLogger(self.__class__.__name__).debug(
-                f"AChat 响应: {content[:100] if content else 'empty'}..."
-            )
-            return content
+            if stream:
+                return self._handle_async_stream_response(response)
+            else:
+                return await self._handle_async_response(response)
 
         except Exception as e:
-            logging.getLogger(self.__class__.__name__).error(
+            logger.error(
                 f"AChat 调用失败: {e}", exc_info=True
             )
             raise
 
-    def stream(self, prompt: str, **kwargs: Any) -> Generator[str, None, None]:
+    @staticmethod
+    def _handle_response(response) -> str:
         """
-        同步流式调用
+        处理非流式响应（子类可重写）
 
         Args:
-            prompt: 提示文本
-            **kwargs: 额外参数（会覆盖默认配置）
+            response: OpenAI 响应对象
 
-        Yields:
-            模型返回的文本片段
-
-        Raises:
-            Exception: 调用失败时抛出异常
+        Returns:
+            响应文本
         """
-        try:
-            params = self._prepare_params(**kwargs)
-            params["stream"] = True
+        content = response.choices[0].message.content
+        logger.debug(
+            f"响应内容: {content[:100] if content else 'empty'}..."
+        )
+        return content
 
-            stream = self.model_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                **params
-            )
-
-            for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    content = chunk.choices[0].delta.content
-                    logging.getLogger(self.__class__.__name__).debug(
-                        f"Stream 片段: {content[:50]}..."
-                    )
-                    yield content
-
-        except Exception as e:
-            logging.getLogger(self.__class__.__name__).error(
-                f"Stream 调用失败: {e}", exc_info=True
-            )
-            raise
-
-    async def astream(
-            self, prompt: str, **kwargs: Any
-    ) -> AsyncGenerator[str, None]:
+    def _handle_stream_response(self, stream) -> Generator[str, None, None]:
         """
-        异步流式调用
+        处理同步流式响应（子类可重写）
 
         Args:
-            prompt: 提示文本
-            **kwargs: 额外参数（会覆盖默认配置）
+            stream: 流式响应对象
 
         Yields:
-            模型返回的文本片段
-
-        Raises:
-            Exception: 调用失败时抛出异常
+            文本片段
         """
-        try:
-            params = self._prepare_params(**kwargs)
-            params["stream"] = True
+        for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                content = chunk.choices[0].delta.content
+                logger.debug(f"同步流式片段: {content[:50]}...")
+                yield content
 
-            stream = await self.async_model_client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                **params
-            )
+    @staticmethod
+    async def _handle_async_response(response) -> str:
+        """
+        处理异步非流式响应（子类可重写）
 
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    content = chunk.choices[0].delta.content
-                    logging.getLogger(self.__class__.__name__).debug(
-                        f"AStream 片段: {content[:50]}..."
-                    )
-                    yield content
+        Args:
+            response: OpenAI 异步响应对象
 
-        except Exception as e:
-            logging.getLogger(self.__class__.__name__).error(
-                f"AStream 调用失败: {e}", exc_info=True
-            )
-            raise
+        Returns:
+            响应文本
+        """
+        content = response.choices[0].message.content
+        logger.debug(
+            f"异步响应内容: {content[:100] if content else 'empty'}..."
+        )
+        return content
+
+    async def _handle_async_stream_response(self, stream) -> AsyncGenerator[str, None]:
+        """
+        处理异步流式响应（子类可重写）
+
+        Args:
+            stream: 异步流式响应对象
+
+        Yields:
+            文本片段
+        """
+        async for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content:
+                content = chunk.choices[0].delta.content
+                logger.debug(f"异步流式片段: {content[:50]}...")
+                yield content
 
     @property
     @abstractmethod
@@ -318,12 +310,12 @@ class BaseLlm(ABC):
 
     @staticmethod
     def _process_config(
-        api_key: str,
-        base_url: str,
-        model: str,
-        config: Optional[Type[LLMConfig]],
-        default_params: Dict[str, Any],
-        base_url_error_msg: str
+            api_key: str,
+            base_url: str,
+            model: str,
+            config: Optional[Type[LLMConfig]],
+            default_params: Dict[str, Any],
+            base_url_error_msg: str
     ) -> tuple:
         """
         处理配置对象和参数

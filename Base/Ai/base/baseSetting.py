@@ -25,6 +25,9 @@ class LLMConfig:
     base_url: str
     """API 基础 URL"""
 
+    stream: bool = False
+    """是否启用流式接口"""
+
     temperature: Optional[float] = None
     """温度参数，控制随机性，范围 0.0-2.0"""
 
