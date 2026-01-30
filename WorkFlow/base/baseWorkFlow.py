@@ -1,7 +1,8 @@
 import logging
-from typing import Optional
+from typing import Optional,Type
 
 from langgraph.graph import StateGraph
+from langgraph.graph.state import CompiledStateGraph
 from WorkFlow._loader import graph_node_mapping, edge_condition_mapping
 from WorkFlow.base.baseState import BaseState
 from WorkFlow.models.nodes.nodeFactory import NodeFactory
@@ -10,11 +11,12 @@ logger = logging.getLogger(__name__)
 
 class BaseWorkFlow:
 
-    def __init__(self, node_list=None):
+    def __init__(self,state_schema: Type[BaseState] = BaseState, node_list=None):
         self.node_list = node_list or []
         self.work_flow: Optional[StateGraph] = None
-        self.workflow_client = None
+        self.workflow_client: Optional[CompiledStateGraph] = None
         self.node_instances = []
+        self.state_schema = state_schema
         self.node_mapping: dict = {**graph_node_mapping}
         # ____________________
         self._node_list_check()
@@ -47,6 +49,7 @@ class BaseWorkFlow:
         tem_node_list = []
         registered_node = []
         last_item = None
+        _count = 0
 
         for i in self.node_list:
 
@@ -59,7 +62,8 @@ class BaseWorkFlow:
                     else:
                         new_list.append(s)
                 if isinstance(last_item,list):
-                    tem_node_list.append("_")
+                    tem_node_list.append(f"__{_count}")
+                    _count += 1
                 tem_node_list.append(new_list)
             # ---------- tuple ----------
             elif isinstance(i, tuple):
@@ -104,7 +108,7 @@ class BaseWorkFlow:
 
     def _init_work_flow(self):
         if not self.work_flow:
-            self.work_flow = StateGraph(BaseState)
+            self.work_flow = StateGraph(self.state_schema)
 
     def invoke(self, input_data: BaseState):
         self.workflow_client.invoke(input_data)

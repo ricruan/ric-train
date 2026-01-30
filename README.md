@@ -30,7 +30,7 @@ docker run --name wolin-ai -p 8000:8000 --env-file .env --restart unless-stopped
   -e MINIO_ROOT_PASSWORD="xxxAr!" \
   -v minio_data:/data \
   minio/minio \
-    server /data --address ":9000" --console-address ":9001"
+    server /data --address "0.0.0.0:9000" --console-address "0.0.0.0:9001"
   
 
 uvicorn Wolin.main:app --host 0.0.0.0 --port 8001

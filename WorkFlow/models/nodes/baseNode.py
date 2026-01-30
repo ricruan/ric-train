@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Optional, Callable
 
 from Base.RicUtils.dataUtils import remove_none
-from WorkFlow.base._enum import NodeTypeEnum
+from WorkFlow.base.wfEnum import NodeTypeEnum
 from abc import ABC
 from langgraph.graph import StateGraph, START, END
 
@@ -59,7 +59,7 @@ class BaseNode(ABC):
             # 下划线数字后缀
             res = self.node_func_mapping.get(re.sub(r'_[0-9]+$', '', node))
         if not res:
-            raise WorkFlowBaseException(f"Node:{node} 获取节点函数获取存在")
+            raise WorkFlowBaseException(f"Node:{node} 获取节点函数获取失败")
         return res
 
     def _register_edge(self):
@@ -96,13 +96,12 @@ class BaseNode(ABC):
         注册边
         :return:
         """
-        work_flow = self.work_flow
         self.register_node()
         if not self.source_node:
-            work_flow.add_edge(start_key=START, end_key=self.node_name)
+            self.add_edge_plus(start_key=START, end_key=self.node_name)
 
         if not self.end_node:
-            work_flow.add_edge(start_key=self.node_name, end_key=END)
+            self.add_edge_plus(start_key=self.node_name, end_key=END)
 
         if self.source_node and self.end_node:
             self._register_edge()

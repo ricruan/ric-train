@@ -89,7 +89,7 @@ class AsrClient:
                 return index, asr_result
             except Exception as asr_error:
                 logger.error(f"处理文件 {audio_file} 时出错: {asr_error}")
-                return index, f"处理失败: {str(asr_error)}"
+                raise RuntimeError(f"【ASR】处理文件 {audio_file} 时出错: {asr_error}")
 
         # 使用线程池并发处理
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:

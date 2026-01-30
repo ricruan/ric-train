@@ -220,8 +220,12 @@ def show_cache_keys():
 
 if __name__ == "__main__":
     # 运行测试
-    test_cache_decorators()
-    
+    # test_cache_decorators()
+
+    res = get_user_info(1)
+    print(res)
+    res = get_user_info(1)
+    print(res)
     # 显示缓存键
     show_cache_keys()
     

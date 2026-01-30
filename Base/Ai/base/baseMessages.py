@@ -1,3 +1,5 @@
+from typing import Any
+
 from openai.types.chat import ChatCompletionUserMessageParam, ChatCompletionMessageParam, \
     ChatCompletionAssistantMessageParam, ChatCompletionSystemMessageParam, ChatCompletionDeveloperMessageParam, \
     ChatCompletionToolMessageParam, ChatCompletionFunctionMessageParam
@@ -9,25 +11,25 @@ class BaseMessages:
     """
 
     @staticmethod
-    def get_user_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionUserMessageParam(content=prompt, role="user", name=name)
+    def get_user_messages(prompt: Any, name: str = None) -> ChatCompletionMessageParam:
+        return ChatCompletionUserMessageParam(content=str(prompt), role="user", name=name)
 
     @staticmethod
-    def get_assistant_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionAssistantMessageParam(content=prompt, role="assistant", name=name)
+    def get_assistant_messages(prompt: Any, name: str = None) -> ChatCompletionMessageParam:
+        return ChatCompletionAssistantMessageParam(content=str(prompt), role="assistant", name=name)
 
     @staticmethod
-    def get_system_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionSystemMessageParam(content=prompt, role="system", name=name)
+    def get_system_messages(prompt: Any, name: str = None) -> ChatCompletionMessageParam:
+        return ChatCompletionSystemMessageParam(content=str(prompt), role="system", name=name)
 
     @staticmethod
-    def get_developer_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionDeveloperMessageParam(content=prompt, role="developer", name=name)
+    def get_developer_messages(prompt: Any, name: str = None) -> ChatCompletionMessageParam:
+        return ChatCompletionDeveloperMessageParam(content=str(prompt), role="developer", name=name)
 
     @staticmethod
-    def get_tool_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionToolMessageParam(content=prompt, role="tool", name=name)
+    def get_tool_messages(prompt: Any, name: str = None) -> ChatCompletionMessageParam:
+        return ChatCompletionToolMessageParam(content=str(prompt), role="tool", name=name)
 
     @staticmethod
-    def get_function_messages(prompt: str, name: str = None) -> ChatCompletionMessageParam:
-        return ChatCompletionFunctionMessageParam(content=prompt, role="function", name=name)
+    def get_function_messages(prompt: Any, name: str = None) -> ChatCompletionMessageParam:
+        return ChatCompletionFunctionMessageParam(content=str(prompt), role="function", name=name)
