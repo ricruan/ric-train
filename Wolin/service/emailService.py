@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 
 from Base.Client.emailClient import send_email
+from Base.Config.setting import settings
 from Base.RicUtils.dateUtils import get_current_date
 from Wolin.service.base import service_logger
 
@@ -13,7 +14,7 @@ logger = service_logger
 class EmailService:
 
     def __init__(self,receiver_emails: list[str] = None):
-        self.sender_email = os.getenv('SENDER_EMAIL')
+        self.sender_email = settings.email.sender_email
         self.receiver_emails = receiver_emails or ['2366692214@qq.com', '1053851332@qq.com','2956090912@qq.com']
 
 

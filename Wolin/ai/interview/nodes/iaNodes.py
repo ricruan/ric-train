@@ -34,7 +34,7 @@ def extract_resume(state: IAState):
     resume_content = extract_pdf_text(state.resume_info.resume_path)
     resume_infos = default_qwen_llm.chat([SystemMessages(RESUME_JSON_EXTRACT_PROMPT), UserMessages(resume_content)])
     resume_info_json = json.loads(resume_infos)
-    state.resume_info = ResumeInfo(**resume_info_json)
+    state.resume_info = ResumeInfo(**resume_info_json,resume_path=state.resume_info.resume_path)
     return {'resume_info': state.resume_info}
 
 
@@ -49,11 +49,7 @@ def resume_analysis(state: IAState):
         return None
     res = default_qwen_llm.chat(
         [SystemMessages(RESUME_ANALYSIS_PROMPT), UserMessages(str(state.resume_info.model_dump()))])
-    state.resume_info.resume_analysis = res
-    updated_resume = state.resume_info.model_copy(
-        update={"resume_analysis": res}
-    )
-    return {'resume_info': {"resume_analysis": res}}
+    return {'report': {"resume_analysis": res}}
 
 
 @graph_node
@@ -85,10 +81,7 @@ def audio_handle(state: IAState):
     # 合并碎片文本
     combine_text = get_combine_text(str_hash_code=short_unique_hash(str(ordered_results)))
     state.asr_info.audio_text = combine_text
-    updated_asr = state.asr_info.model_copy(
-        update={"audio_text": combine_text}
-    )
-    return {'asr_info': updated_asr}
+    return {'asr_info': {"audio_text": combine_text}}
 
 
 @graph_node
@@ -100,9 +93,6 @@ def get_report_paragraph1(state: IAState):
     """
     res = default_qwen_llm.chat([SystemMessages(ANALYSIS_START_PROMPT), UserMessages(state.asr_info.audio_text)])
     state.report.analysis_start = res
-    updated_report = state.report.model_copy(
-        update={"analysis_start": res}
-    )
     return {"report": {"analysis_start": res}}
 
 
@@ -130,9 +120,6 @@ def get_qa_pair(state: IAState):
     """
     res = default_qwen_llm.chat([SystemMessages(CORE_QA_EXTRACT_PROMPT), UserMessages(state.asr_info.audio_text)])
     res = json.loads(res)
-    updated_asr = state.asr_info.model_copy(
-        update={"qa_pairs": res}
-    )
     return {"asr_info": {"qa_pairs": res}}
 
 
@@ -168,9 +155,6 @@ def self_evaluation(state: IAState):
     """
     system_prompt = render(SELF_EVALUATION_PROMPT, {"analysis_start": state.report.analysis_start})
     res = default_qwen_llm.chat([SystemMessages(system_prompt), UserMessages(state.asr_info.audio_text)])
-    updated_report = state.report.model_copy(
-        update={"self_evaluation": res}
-    )
     return {"report": {"self_evaluation": res}}
 
 
@@ -183,9 +167,6 @@ def analysis_end(state: IAState):
     """
     system_prompt = render(ANALYSIS_END_PROMPT, {"analysis_start": state.report.analysis_start})
     res = default_qwen_llm.chat([SystemMessages(system_prompt), UserMessages(state.asr_info.audio_text)])
-    updated_report = state.report.model_copy(
-        update={"analysis_end": res}
-    )
     return {"report": {"analysis_end": res}}
 
 
@@ -202,17 +183,27 @@ def generate_report(state: IAState):
     logger.debug(f'报告的参数上下文dict: {state.context_params}')
     output_path = generate_doc_with_jinja(template_path, state.context_params)
     logger.info(f"面试报告临时存储位置：\n {output_path}")
-    default_minio_client.upload_file(bucket_name="interview-report",
-                              object_name=state.minio_path,
-                              file_path=output_path)
 
-    uuid_str = str(uuid.uuid4())
-    get_email_service().send_emails_4_ia(
-        user_name=state.api_params.user_name,
-        ia_id=uuid_str,
-        report_path=state.minio_path,
-        user_email=['2366692214@qq.com',state.api_params.receive_email]
-    )
+    try:
+        default_minio_client.upload_file(bucket_name="interview-report",
+                                         object_name=state.minio_path,
+                                         file_path=output_path)
+    except Exception as e:
+        logger.error(f"报告MinIO存储失败：{e}")
+        return None
+
+
+    try:
+        uuid_str = str(uuid.uuid4())
+        get_email_service().send_emails_4_ia(
+            user_name=state.api_params.user_name,
+            ia_id=uuid_str,
+            report_path=output_path,
+            user_email=['2366692214@qq.com',state.api_params.receive_email]
+        )
+    except Exception as e:
+        logger.error(f"报告邮件发送失败：{e}")
+        return None
 
 
 
