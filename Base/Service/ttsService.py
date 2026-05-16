@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 class TtsService:
     """
     TTS 缓存服务：通过 MinIO 持久化已生成的音频，避免重复合成相同内容。
-    所有返回路径均为 MinIO 预签名 URL，可直接用于前端播放。
+    返回值为 MinIO object_name，调用方可自行生成预签名 URL。
     """
 
     def __init__(self, voice: str = "中文女", url_expiry_hours: float = 24):
@@ -35,12 +35,12 @@ class TtsService:
     ) -> Optional[str]:
         """
         合成语音，优先从 MinIO 缓存中获取。
-        返回 MinIO 预签名 URL，可直接用于前端播放。
+        返回 MinIO object_name，调用方可自行生成预签名 URL。
 
         :param text: 合成文本
         :param voice: 音色，不传则使用默认音色
         :param kwargs: 透传给 TtsClient.synthesize 的额外参数
-        :return: 预签名 URL，失败时返回 None
+        :return: MinIO object_name（格式：{voice}/{md5}.wav），失败时返回 None
         """
         voice = voice or self.voice
         object_name = self._build_object_name(voice, text)
@@ -48,13 +48,8 @@ class TtsService:
         # 1. 检查 MinIO 缓存是否存在
         stat = self._minio_client.stat_object(self.bucket_name, object_name)
         if stat:
-            url = self._minio_client.get_presigned_url(
-                self.bucket_name, object_name, expiry_hours=self.url_expiry_hours
-            )
-            if url:
-                logger.info(f"TTS 缓存命中: voice={voice}, object_name={object_name}")
-                return url
-            logger.warning(f"TTS 缓存命中但预签名 URL 生成失败: {object_name}")
+            logger.info(f"TTS 缓存命中: voice={voice}, object_name={object_name}")
+            return object_name
 
         # 2. 缓存未命中，调用 TTS 生成
         logger.info(f"TTS 缓存未命中，开始合成: voice={voice}")
@@ -70,20 +65,13 @@ class TtsService:
         # 3. 上传到 MinIO 缓存
         self._upload_to_minio(local_path, object_name)
 
-        # 4. 生成预签名 URL
-        url = self._minio_client.get_presigned_url(
-            self.bucket_name, object_name, expiry_hours=self.url_expiry_hours
-        )
-        if not url:
-            logger.error(f"上传成功但预签名 URL 生成失败: {object_name}")
-
-        # 5. 清理本地临时文件
+        # 4. 清理本地临时文件
         try:
             os.unlink(local_path)
         except OSError:
             pass
 
-        return url
+        return object_name
 
     # ──────────────── 内部方法 ────────────────
 
@@ -112,7 +100,7 @@ def synthesize_tts(text: str, voice: str = "中文女", **kwargs) -> Optional[st
     :param text: 合成文本
     :param voice: 音色
     :param kwargs: 透传给 TtsClient.synthesize 的额外参数
-    :return: MinIO 预签名 URL，可直接用于前端播放
+    :return: MinIO object_name（格式：{voice}/{md5}.wav），失败时返回 None
     """
     return TtsService(voice=voice).synthesize(text=text, **kwargs)
 
