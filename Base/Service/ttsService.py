@@ -63,7 +63,8 @@ class TtsService:
             return None
 
         # 3. 上传到 MinIO 缓存
-        self._upload_to_minio(local_path, object_name)
+        if not self._upload_to_minio(local_path, object_name):
+            return None
 
         # 4. 清理本地临时文件
         try:
@@ -85,12 +86,14 @@ class TtsService:
         text_hash = hashlib.md5(text.encode("utf-8")).hexdigest()
         return f"{voice}/{text_hash}.wav"
 
-    def _upload_to_minio(self, local_path: str, object_name: str):
-        """将本地音频上传到 MinIO 缓存。"""
+    def _upload_to_minio(self, local_path: str, object_name: str) -> bool:
+        """将本地音频上传到 MinIO 缓存。返回是否成功。"""
         try:
             self._minio_client.upload_file(self.bucket_name, object_name, local_path)
+            return True
         except Exception as e:
             logger.error(f"TTS 缓存上传失败: {e}")
+            return False
 
 
 def synthesize_tts(text: str, voice: str = "中文女", **kwargs) -> Optional[str]:
@@ -104,12 +107,3 @@ def synthesize_tts(text: str, voice: str = "中文女", **kwargs) -> Optional[st
     """
     return TtsService(voice=voice).synthesize(text=text, **kwargs)
 
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    path = synthesize_tts("你好，这是缓存测试。")
-    print(f"合成完成: {path}")
-
-    # 第二次调用应该命中缓存
-    path2 = synthesize_tts("你好，这是缓存测试。")
-    print(f"缓存命中: {path2}")

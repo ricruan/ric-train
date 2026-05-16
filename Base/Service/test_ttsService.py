@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 from Base.Service.ttsService import TtsService, synthesize_tts
 
 
-class TestSynthesizeReturnsObjectName:
+class TestTtsServiceSynthesize:
     """synthesize() 应返回 object_name 而非完整预签名 URL"""
 
     def setup_method(self):
@@ -33,6 +33,7 @@ class TestSynthesizeReturnsObjectName:
         assert result.startswith("中文女/")
         assert result.endswith(".wav")
         assert not result.startswith("http")
+        self.mock_minio_client.upload_file.assert_called_once()
 
     def test_synthesize_cache_hit_returns_object_name(self):
         """缓存命中时也应返回 object_name"""
@@ -52,6 +53,19 @@ class TestSynthesizeReturnsObjectName:
 
         result = self.service.synthesize("你好")
         assert result is None
+
+
+    def test_synthesize_tts_calls_service(self):
+        """synthesize_tts 便捷函数委托给 TtsService"""
+        with patch("Base.Service.ttsService.TtsService") as mock_service_cls:
+            mock_service = MagicMock()
+            mock_service.synthesize.return_value = "中文女/abc123.wav"
+            mock_service_cls.return_value = mock_service
+
+            result = synthesize_tts("测试文本", voice="中文女")
+
+            assert result == "中文女/abc123.wav"
+            mock_service.synthesize.assert_called_once_with(text="测试文本")
 
 
 if __name__ == "__main__":
