@@ -49,21 +49,32 @@ def _parse_questions(raw: str) -> list[str]:
     return [line.strip() for line in text.split("\n") if line.strip()]
 
 
-def generate_interview_audio(resume_file_path: str, voice: str = "中文女") -> list[dict]:
+def generate_interview_audio(
+    resume_file_path: str,
+    voice: str = "中文女",
+    expiry_hours: int = 24,
+) -> list[dict]:
     """
     传入简历文件路径，返回包含问题和对应 TTS 预签名 URL 的字典列表。
 
     :param resume_file_path: 简历文件路径
     :param voice: 合成音色
+    :param expiry_hours: 预签名 URL 有效期
     :return: [{"question": "...", "audio_url": "https://..."}]
     """
     resume_text = _read_resume(resume_file_path)
     questions = extract_interview_questions(resume_text)
 
+    minio_client = MinioClient()
     results = []
     for question in questions:
-        audio_url = synthesize_tts(text=question, voice=voice)
-        if audio_url:
+        object_name = synthesize_tts(text=question, voice=voice)
+        if object_name:
+            audio_url = minio_client.get_presigned_url(
+                "tts-audio-cache",
+                object_name,
+                expiry_hours=expiry_hours,
+            )
             results.append({"question": question, "audio_url": audio_url})
         else:
             logger.warning(f"TTS 合成失败，跳过问题: {question[:50]}")
