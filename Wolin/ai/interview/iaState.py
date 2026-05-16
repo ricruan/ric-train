@@ -29,7 +29,7 @@ class ResumeInfo(BaseModel):
     major: Optional[str] = Field(None, description='专业')
     last_company: Optional[str] = Field(None, description='上一份工作公司')
     last_position: Optional[str] = Field(None, description='上一份工作职位')
-    last_salary: Optional[str] = Field(None, description='上一份工作薪资')
+    last_salary: Optional[str | int] = Field(None, description='上一份工作薪资')
     last_start_time: Optional[str] = Field(None, description='上一份工作时间')
     last_end_time: Optional[str] = Field(None, description='上一份工作时间')
     last_duration: Optional[str] = Field(None, description='上一份工作周期')
