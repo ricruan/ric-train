@@ -297,6 +297,20 @@ class Neo4jSettings(BaseEnvSettings):
     )
 
 # =========================
+# Auth / JWT
+# =========================
+class AuthSettings(BaseEnvSettings):
+    jwt_secret: Optional[str] = Field(None, alias="JWT_SECRET")
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+    refresh_token_expire_days: int = 7
+
+    model_config = SettingsConfigDict(
+        env_prefix="AUTH_",
+        extra="ignore",
+    )
+
+# =========================
 # TTS
 # =========================
 class TtsSettings(BaseEnvSettings):
@@ -331,6 +345,7 @@ class Settings(BaseEnvSettings):
     milvus: MilvusSettings = Field(default_factory=MilvusSettings)
     tencent_cos: TencentCOSSettings = Field(default_factory=TencentCOSSettings)
     base_module: BaseModuleSettings = Field(default_factory=BaseModuleSettings)
+    auth: AuthSettings = Field(default_factory=AuthSettings)
     neo4j: Neo4jSettings = Field(default_factory=Neo4jSettings)
     tts: TtsSettings = Field(default_factory=TtsSettings)
 

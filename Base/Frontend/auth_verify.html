@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>用户认证验证</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --border: #2a2d3a;
+      --accent: #6c5ce7;
+      --accent-hover: #7c6cf7;
+      --text: #e0e0e0;
+      --text-muted: #888;
+      --success: #00b894;
+      --error: #e17055;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      width: 420px;
+      max-width: 95vw;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.4);
+    }
+    .tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 28px;
+      border-bottom: 2px solid var(--border);
+    }
+    .tab {
+      flex: 1;
+      padding: 12px 0;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 15px;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: .2s;
+      user-select: none;
+    }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .form { display: none; }
+    .form.active { display: block; }
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--accent);
+    }
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+      margin-top: 8px;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .msg {
+      margin-top: 16px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+    .msg.show { display: block; }
+    .msg.success { background: rgba(0,184,148,.12); color: var(--success); border: 1px solid rgba(0,184,148,.3); }
+    .msg.error { background: rgba(225,112,85,.12); color: var(--error); border: 1px solid rgba(225,112,85,.3); }
+
+    .token-section {
+      margin-top: 24px;
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      display: none;
+    }
+    .token-section.show { display: block; }
+    .token-section h3 {
+      font-size: 14px;
+      color: var(--success);
+      margin-bottom: 12px;
+    }
+    .token-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .token-box label {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .token-box code {
+      display: block;
+      font-size: 11px;
+      word-break: break-all;
+      color: var(--accent);
+      user-select: all;
+    }
+    .test-section {
+      margin-top: 16px;
+    }
+    .test-btn {
+      padding: 8px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      transition: .2s;
+    }
+    .test-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .test-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+    .api-config {
+      margin-bottom: 24px;
+      display: flex;
+      gap: 8px;
+    }
+    .api-config input {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 12px;
+      outline: none;
+    }
+    .api-config input:focus { border-color: var(--accent); }
+    .api-config label {
+      font-size: 11px;
+      color: var(--text-muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="api-config">
+        <div style="width:100%">
+          <label>API Base URL</label>
+          <input id="apiBase" type="text" value="http://localhost:8010" placeholder="http://localhost:8010">
+        </div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" data-tab="login">登 录</div>
+        <div class="tab" data-tab="register">注 册</div>
+      </div>
+
+      <form class="form active" id="loginForm" autocomplete="off">
+        <div class="field">
+          <label>用户名</label>
+          <input type="text" id="loginUsername" required placeholder="输入用户名">
+        </div>
+        <div class="field">
+          <label>密码</label>
+          <input type="password" id="loginPassword" required placeholder="输入密码">
+        </div>
+        <button class="btn" type="submit">登 录</button>
+        <div class="msg" id="loginMsg"></div>
+      </form>
+
+      <form class="form" id="registerForm" autocomplete="off">
+        <div class="field">
+          <label>用户名 *</label>
+          <input type="text" id="regUsername" required placeholder="3-50位字符">
+        </div>
+        <div class="field">
+          <label>密码 *</label>
+          <input type="password" id="regPassword" required placeholder="至少6位">
+        </div>
+        <div class="field">
+          <label>邮箱</label>
+          <input type="email" id="regEmail" placeholder="可选">
+        </div>
+        <div class="field">
+          <label>手机号</label>
+          <input type="tel" id="regPhone" placeholder="可选">
+        </div>
+        <div class="field">
+          <label>来源模块 *</label>
+          <select id="regSource">
+            <option value="wolin">Wolin</option>
+            <option value="education">Education</option>
+            <option value="default">Default</option>
+          </select>
+        </div>
+        <button class="btn" type="submit">注 册</button>
+        <div class="msg" id="regMsg"></div>
+      </form>
+
+      <div class="token-section" id="tokenSection">
+        <h3>登录成功</h3>
+        <div class="token-box">
+          <label>Access Token</label>
+          <code id="accessToken"></code>
+        </div>
+        <div class="token-box">
+          <label>Refresh Token</label>
+          <code id="refreshToken"></code>
+        </div>
+        <div class="test-section">
+          <button class="test-btn" id="testBtn">验证 Token (获取当前用户)</button>
+          <button class="test-btn" id="refreshBtn" style="margin-left:8px">刷新 Access Token</button>
+        </div>
+        <div class="msg" id="testMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const getBase = () => document.getElementById('apiBase').value.replace(/\/$/, '');
+    const msgEl = (id) => { const el = document.getElementById(id); el.className = 'msg show'; return el; };
+    function showMsg(el, type, text) {
+      el.textContent = text;
+      el.className = `msg show ${type}`;
+    }
+
+    // Tab 切换
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab + 'Form').classList.add('active');
+      });
+    });
+
+    // 注册
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('.btn');
+      btn.disabled = true;
+      btn.textContent = '注册中...';
+      const msg = msgEl('regMsg');
+      showMsg(msg, 'success', '');
+
+      try {
+        const res = await fetch(`${getBase()}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('regUsername').value,
+            password: document.getElementById('regPassword').value,
+            email: document.getElementById('regEmail').value || null,
+            phone: document.getElementById('regPhone').value || null,
+            source_module: document.getElementById('regSource').value,
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg(msg, 'success', `注册成功！用户: ${data.data?.username || document.getElementById('regUsername').value}`);
+          // 自动切换到登录 tab
+          setTimeout(() => document.querySelector('[data-tab="login"]').click(), 1200);
+        } else {
+          showMsg(msg, 'error', data.detail || data.msg || '注册失败');
+        }
+      } catch (err) {
+        showMsg(msg, 'error', `网络错误: ${err.message}`);
+      }
+      btn.disabled = false;
+      btn.textContent = '注 册';
+    });
+
+    // 登录
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('.btn');
+      btn.disabled = true;
+      btn.textContent = '登录中...';
+      const msg = msgEl('loginMsg');
+      showMsg(msg, 'success', '');
+
+      try {
+        const res = await fetch(`${getBase()}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username: document.getElementById('loginUsername').value,
+            password: document.getElementById('loginPassword').value,
+          })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg(msg, 'success', '登录成功');
+          document.getElementById('accessToken').textContent = data.data?.access_token || '';
+          document.getElementById('refreshToken').textContent = data.data?.refresh_token || '';
+          document.getElementById('tokenSection').classList.add('show');
+        } else {
+          showMsg(msg, 'error', data.detail || data.msg || '登录失败');
+          document.getElementById('tokenSection').classList.remove('show');
+        }
+      } catch (err) {
+        showMsg(msg, 'error', `网络错误: ${err.message}`);
+      }
+      btn.disabled = false;
+      btn.textContent = '登 录';
+    });
+
+    // 验证 Token
+    document.getElementById('testBtn').addEventListener('click', async () => {
+      const token = document.getElementById('accessToken').textContent;
+      if (!token) return;
+      const msg = msgEl('testMsg');
+      showMsg(msg, 'success', '验证中...');
+      try {
+        const res = await fetch(`${getBase()}/api/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg(msg, 'success', `Token 有效，用户: ${data.username} (模块: ${data.source_module})`);
+        } else {
+          showMsg(msg, 'error', data.detail || 'Token 无效或已过期');
+        }
+      } catch (err) {
+        showMsg(msg, 'error', `网络错误: ${err.message}`);
+      }
+    });
+
+    // 刷新 Token
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      const token = document.getElementById('refreshToken').textContent;
+      if (!token) return;
+      const msg = msgEl('testMsg');
+      showMsg(msg, 'success', '刷新中...');
+      try {
+        const res = await fetch(`${getBase()}/api/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: token })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('accessToken').textContent = data.access_token;
+          showMsg(msg, 'success', 'Access Token 已刷新');
+        } else {
+          showMsg(msg, 'error', data.detail || '刷新失败');
+        }
+      } catch (err) {
+        showMsg(msg, 'error', `网络错误: ${err.message}`);
+      }
+    });
+  </script>
+</body>
+</html>
