@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 import os
@@ -151,13 +152,19 @@ def generate_and_store_questions_async(
             os.unlink(resume_file_path)
 
 
-def get_questions_with_audio_url(record_uuid: str, expiry_hours: int = 24) -> list[dict]:
+def get_questions_with_audio_url(
+    record_uuid: str,
+    expiry_hours: int = 24,
+    voice: str = "中文女",
+) -> list[dict]:
     """
     根据 record_uuid 查询面试问题列表，返回音频访问 URL。
-    若数据库中存储的是完整 URL 则直接返回，否则生成 MinIO 预签名 URL。
+    URL 在每次查询时动态生成，不存在过期问题。
+    若 tts_audio_path 为空，则从 question_text 重建 object_name 并尝试回补。
 
     :param record_uuid: 面试记录 UUID
     :param expiry_hours: 预签名 URL 有效期（小时）
+    :param voice: 默认音色（用于重建缺失的 object_name）
     :return: [{"question": "...", "audio_url": "https://..."}]
     """
     saved_questions = InterviewQuestionPo.find_by(
@@ -169,17 +176,26 @@ def get_questions_with_audio_url(record_uuid: str, expiry_hours: int = 24) -> li
     results = []
     for item in saved_questions:
         audio_url = None
+        object_name = None
+
         if item.tts_audio_path:
-            if item.tts_audio_path.startswith("http"):
-                # 已是完整 URL，直接返回
-                audio_url = item.tts_audio_path
-            else:
-                # 存储的是 MinIO object_name，生成预签名 URL
-                audio_url = minio_client.get_presigned_url(
-                    "tts-audio-cache",
-                    item.tts_audio_path,
-                    expiry_hours=expiry_hours,
-                )
+            # 已存储 object_name，直接生成 URL
+            object_name = item.tts_audio_path
+        else:
+            # 字段为空，从 question_text + voice 重建 object_name
+            text_hash = hashlib.md5(item.question_text.encode("utf-8")).hexdigest()
+            object_name = f"{voice}/{text_hash}.wav"
+
+        if object_name and minio_client:
+            audio_url = minio_client.get_presigned_url(
+                "tts-audio-cache",
+                object_name,
+                expiry_hours=expiry_hours,
+            )
+            # 如果是从空字段重建的且成功生成，回写 DB
+            if audio_url and not item.tts_audio_path:
+                item.update(tts_audio_path=object_name)
+
         results.append({
             "question": item.question_text,
             "audio_url": audio_url,
