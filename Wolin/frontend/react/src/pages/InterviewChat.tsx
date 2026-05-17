@@ -14,6 +14,7 @@ export default function InterviewChat() {
   const [camReady, setCamReady] = useState(false);
   const [chatStarted, setChatStarted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [questionsLoaded, setQuestionsLoaded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [recording, setRecording] = useState(false);
   const [toast, setToast] = useState<{ text: string; type: string } | null>(null);
@@ -49,16 +50,31 @@ export default function InterviewChat() {
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
           audio: true,
         });
-        if (cancelled) return;
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
         setCamReady(true);
       } catch {
         if (!cancelled) setCamReady(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+    };
   }, []);
+
+  useEffect(() => {
+    if (chatStarted && streamRef.current && videoRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [chatStarted]);
 
   const startChat = async () => {
     const trimmed = uuid.trim();
@@ -81,7 +97,7 @@ export default function InterviewChat() {
         questionsRef.current = qs;
         currentQRef.current = 0;
         setChatStarted(true);
-        showNextQuestion();
+        setQuestionsLoaded(true);
       } else {
         showToast('未找到面试问题，请检查 UUID', 'error');
       }
@@ -134,6 +150,11 @@ export default function InterviewChat() {
     }
   }, []);
 
+  const beginInterview = useCallback(() => {
+    setQuestionsLoaded(false);
+    showNextQuestion();
+  }, [showNextQuestion]);
+
   const startRecording = useCallback(() => {
     if (recording || !streamRef.current) return;
     const audioTrack = streamRef.current.getAudioTracks()[0];
@@ -183,7 +204,6 @@ export default function InterviewChat() {
         ]);
         currentQRef.current++;
         scrollDown();
-        // Small delay before next question
         setTimeout(showNextQuestion, 300);
       } else {
         showToast(`识别失败: ${data.msg || '未返回文字'}`, 'error');
@@ -194,9 +214,9 @@ export default function InterviewChat() {
   };
 
   return (
-    <div className="page chat-page">
-      <h1>模拟面试对话</h1>
-      <p className="subtitle">基于简历问题的交互式面试</p>
+    <div className="page chat-page interview-console">
+      <h1 className="console-title">模拟面试对话</h1>
+      <p className="subtitle console-subtitle">基于简历问题的交互式面试</p>
 
       {!chatStarted ? (
         <div className="uuid-section">
@@ -219,20 +239,31 @@ export default function InterviewChat() {
             {camReady ? '摄像头已就绪' : '摄像头权限被拒绝，请允许后刷新页面'}
           </div>
         </div>
-      ) : null}
-
-      {chatStarted && (
-        <div className="main-layout active">
-          <div className="camera-panel">
-            <div className="video-container">
-              <video ref={videoRef} autoPlay playsInline muted />
+      ) : (
+        <div className="content-area">
+          <div className="console-layout">
+            <div className="console-camera">
+              <div className="camera-frame">
+                <video ref={videoRef} autoPlay playsInline muted />
+                <div className="camera-overlay">
+                  <div className="live-badge">
+                    <span className="live-dot" />
+                    LIVE
+                  </div>
+                </div>
+                <div className="corner corner-tl" />
+                <div className="corner corner-tr" />
+                <div className="corner corner-bl" />
+                <div className="corner corner-br" />
+              </div>
+              <div className="camera-label">面试过程中摄像头不可关闭</div>
             </div>
-            <div className="camera-label">面试过程中摄像头不可关闭</div>
-          </div>
 
-          <div className="chat-panel">
-            <div className="chat-container">
-              <div className="chat-header">面试官</div>
+            <div className="console-chat">
+              <div className="chat-header">
+                <span className="header-icon" />
+                面试官
+              </div>
               <div className="chat-messages" ref={chatMessagesRef}>
                 {messages.map((msg) => (
                   <div key={msg.id} className={`msg ${msg.type}`}>
@@ -253,25 +284,37 @@ export default function InterviewChat() {
                 ))}
               </div>
               <div className="record-area">
-                <button
-                  className="record-btn full"
-                  onMouseDown={startRecording}
-                  onMouseUp={stopRecording}
-                  onMouseLeave={stopRecording}
-                  onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
-                  onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
-                  disabled={!camReady || recording || currentQRef.current >= questionsRef.current.length}
-                >
-                  {!camReady
-                    ? '摄像头未就绪'
-                    : currentQRef.current >= questionsRef.current.length
-                    ? '面试已完成'
-                    : isPlayingRef.current
-                    ? '面试官发言中...'
-                    : recording
-                    ? '松开结束录音'
-                    : '按住录音，松开发送'}
-                </button>
+                {questionsLoaded ? (
+                  <div className="confirm-prompt">
+                    <div className="confirm-card">
+                      <div className="confirm-title">面试官已抵达在线会议室</div>
+                      <div className="confirm-sub">请在做好准备后，点击 开始面试 按钮</div>
+                    </div>
+                    <button className="btn-confirm" onClick={beginInterview}>
+                      开始面试
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    className="record-btn full"
+                    onMouseDown={startRecording}
+                    onMouseUp={stopRecording}
+                    onMouseLeave={stopRecording}
+                    onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
+                    onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
+                    disabled={!camReady || recording || currentQRef.current >= questionsRef.current.length}
+                  >
+                    {!camReady
+                      ? '摄像头未就绪'
+                      : currentQRef.current >= questionsRef.current.length
+                      ? '面试已完成'
+                      : isPlayingRef.current
+                      ? '面试官发言中...'
+                      : recording
+                      ? '松开结束录音'
+                      : '按住录音，松开发送'}
+                  </button>
+                )}
               </div>
             </div>
           </div>

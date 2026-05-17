@@ -12,6 +12,7 @@ export default function CameraTest() {
   type StatusType = 'info' | 'success' | 'error' | 'recording';
   const [status, setStatus] = useState<{ text: string; type: StatusType }>({ text: '等待操作...', type: 'info' });
   const [asrStatus, setAsrStatus] = useState<{ text: string; type: 'info' | 'success' | 'error' | 'recording' }>({ text: '', type: 'info' });
+  const [streamActive, setStreamActive] = useState(false);
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
   const [recording, setRecording] = useState(false);
 
@@ -32,6 +33,7 @@ export default function CameraTest() {
       });
       if (videoRef.current) videoRef.current.srcObject = stream;
       streamRef.current = stream;
+      setStreamActive(true);
       setStatusSafe('摄像头已启动，画面与音频正常。', 'success');
     } catch (err: unknown) {
       const e = err as DOMException;
@@ -48,6 +50,7 @@ export default function CameraTest() {
       streamRef.current.getTracks().forEach((t) => t.stop());
       if (videoRef.current) videoRef.current.srcObject = null;
       streamRef.current = null;
+      setStreamActive(false);
       setStatusSafe('摄像头已停止。', 'info');
     }
   };
@@ -117,7 +120,7 @@ export default function CameraTest() {
         <div className="video-panel animate-in">
           <div className="video-container">
             <video ref={videoRef} autoPlay playsInline muted />
-            {!streamRef.current && (
+            {!streamActive && (
               <div className="placeholder">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -129,8 +132,8 @@ export default function CameraTest() {
           </div>
 
           <div className="controls">
-            <button className="btn-primary" onClick={startCamera} disabled={!!streamRef.current}>启动摄像头</button>
-            <button className="btn-danger" onClick={stopCamera} disabled={!streamRef.current}>停止摄像头</button>
+            <button className="btn-primary" onClick={startCamera} disabled={streamActive}>启动摄像头</button>
+            <button className="btn-danger" onClick={stopCamera} disabled={!streamActive}>停止摄像头</button>
           </div>
 
           <div className={`status ${status.type}`}>{status.text}</div>
@@ -142,7 +145,7 @@ export default function CameraTest() {
             onMouseLeave={stopRecording}
             onTouchStart={(e) => { e.preventDefault(); startRecording(); }}
             onTouchEnd={(e) => { e.preventDefault(); stopRecording(); }}
-            disabled={!streamRef.current || recording}
+            disabled={!streamActive || recording}
           >
             {recording ? '松开结束录音' : '按住录音'}
           </button>
