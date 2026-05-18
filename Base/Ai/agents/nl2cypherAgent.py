@@ -7,7 +7,7 @@ NL2Cypher Agent — 基于 ReActAgent 的知识图谱构建 Agent
 import json
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 class ExtractGraphArgs(BaseModel):
     text: str = Field(..., description="要抽取的自然语言文本")
-    schema: Optional[dict] = Field(None, description="可选的 schema 约束")
+    graph_schema: Optional[dict] = Field(None, description="可选的 schema 约束")
 
 
 class ExtractGraphTool(BaseTool):
@@ -34,8 +34,8 @@ class ExtractGraphTool(BaseTool):
     description = "从自然语言文本中抽取实体和关系，返回 JSON 格式的实体和关系列表"
     args_schema = ExtractGraphArgs
 
-    def execute(self, text: str, schema: Optional[dict] = None) -> str:
-        entities, relations = parse_nl_2_graph(text, schema=schema)
+    def execute(self, text: str, graph_schema: Optional[dict] = None) -> str:
+        entities, relations = parse_nl_2_graph(text, schema=graph_schema)
         result = {
             "entities": [
                 {"label": e.label, "properties": e.properties}
@@ -56,85 +56,66 @@ class ExtractGraphTool(BaseTool):
         return json.dumps(result, ensure_ascii=False, indent=2)
 
 
-class CheckNodeArgs(BaseModel):
-    label: str = Field(..., description="实体类型标签，如 'Person'")
-    properties: dict = Field(..., description="用于匹配实体的属性字典")
+class InsertGraphArgs(BaseModel):
+    entities: list = Field(..., description="实体列表，每项包含 label 和 properties")
+    relations: list = Field(default_factory=list, description="关系列表，每项包含 from_entity, to_entity, rel_type")
 
 
-class CheckNodeTool(BaseTool):
-    """查询 Neo4j 中节点是否已存在"""
+class InsertGraphTool(BaseTool):
+    """批量插入实体和关系到 Neo4j（一次调用完成）"""
 
-    name = "CheckNodeTool"
-    description = "检查 Neo4j 数据库中是否存在指定节点"
-    args_schema = CheckNodeArgs
-
-    def __init__(self, client: Neo4jClient):
-        super().__init__()
-        self.client = client
-
-    def execute(self, label: str, properties: dict) -> str:
-        result = self.client.get_node(label, properties)
-        if result:
-            return json.dumps({"exists": True, "node": result[0]}, ensure_ascii=False, indent=2)
-        return json.dumps({"exists": False}, ensure_ascii=False, indent=2)
-
-
-class InsertNodeArgs(BaseModel):
-    label: str = Field(..., description="实体类型标签，如 'Person'")
-    properties: dict = Field(..., description="实体属性字典")
-
-
-class InsertNodeTool(BaseTool):
-    """插入新节点"""
-
-    name = "InsertNodeTool"
-    description = "在 neo4j 数据库中创建新节点"
-    args_schema = InsertNodeArgs
+    name = "InsertGraphTool"
+    description = "批量创建实体并建立关系，一次调用完成所有插入"
+    args_schema = InsertGraphArgs
 
     def __init__(self, client: Neo4jClient):
         super().__init__()
         self.client = client
 
-    def execute(self, label: str, properties: dict) -> str:
-        result = self.client.create_node(label, properties)
-        if result:
-            return json.dumps({"success": True, "node": result[0]}, ensure_ascii=False, indent=2)
-        return json.dumps({"success": False, "error": "创建节点返回空结果"}, ensure_ascii=False, indent=2)
+    def execute(self, entities: list, relations: Optional[list] = None) -> str:
+        if relations is None:
+            relations = []
 
+        inserted = 0
+        skipped = 0
+        rels_created = 0
+        rels_failed = 0
 
-class InsertRelationArgs(BaseModel):
-    from_label: str = Field(..., description="起始节点类型标签")
-    from_props: dict = Field(..., description="起始节点属性")
-    to_label: str = Field(..., description="目标节点类型标签")
-    to_props: dict = Field(..., description="目标节点属性")
-    rel_type: str = Field(..., description="关系类型，如 'FOUNDED'")
-    rel_props: dict = Field(default_factory=dict, description="关系属性（可选）")
+        for e in entities:
+            try:
+                result = self.client.create_node(e["label"], e.get("properties", {}))
+                if result:
+                    inserted += 1
+                else:
+                    skipped += 1
+            except Exception as err:
+                logger.error(f"插入实体失败: {e}: {err}")
+                skipped += 1
 
+        for r in relations:
+            try:
+                result = self.client.create_relationship(
+                    from_label=r["from_entity"]["label"],
+                    from_props=r["from_entity"].get("properties", {}),
+                    to_label=r["to_entity"]["label"],
+                    to_props=r["to_entity"].get("properties", {}),
+                    rel_type=r["rel_type"],
+                    rel_props=r.get("properties", {}),
+                )
+                if result:
+                    rels_created += 1
+                else:
+                    rels_failed += 1
+            except Exception as err:
+                logger.error(f"插入关系失败: {r}: {err}")
+                rels_failed += 1
 
-class InsertRelationTool(BaseTool):
-    """插入新关系"""
-
-    name = "InsertRelationTool"
-    description = "在 neo4j 数据库中两个节点之间创建关系"
-    args_schema = InsertRelationArgs
-
-    def __init__(self, client: Neo4jClient):
-        super().__init__()
-        self.client = client
-
-    def execute(self, from_label: str, from_props: dict, to_label: str, to_props: dict,
-                rel_type: str, rel_props: Optional[dict] = None) -> str:
-        result = self.client.create_relationship(
-            from_label=from_label,
-            from_props=from_props,
-            to_label=to_label,
-            to_props=to_props,
-            rel_type=rel_type,
-            rel_props=rel_props or {},
-        )
-        if result:
-            return json.dumps({"success": True, "relationship": result[0]}, ensure_ascii=False, indent=2)
-        return json.dumps({"success": False, "error": "创建关系返回空结果，可能节点不存在"}, ensure_ascii=False, indent=2)
+        return json.dumps({
+            "entities_inserted": inserted,
+            "entities_skipped": skipped,
+            "relations_created": rels_created,
+            "relations_failed": rels_failed,
+        }, ensure_ascii=False, indent=2)
 
 
 # ────────────────────────── Agent 定义 ──────────────────────────
@@ -143,14 +124,10 @@ NL2CYPHER_SYSTEM_PROMPT = (
     "你是一个知识图谱构建 Agent。你的任务是从用户输入的文本中抽取实体和关系，并插入 Neo4j 数据库。\n\n"
     "工作流程：\n"
     "1. 使用 ExtractGraphTool 从文本中抽取实体和关系\n"
-    "2. 对每个实体，使用 CheckNodeTool 检查是否已存在\n"
-    "3. 对不存在的实体，使用 InsertNodeTool 插入\n"
-    "4. 所有实体插入完成后，使用 InsertRelationTool 插入关系\n"
-    "5. 完成后告知用户结果（成功创建了多少实体和关系）\n\n"
-    "注意：\n"
-    "- 插入关系前确保两端节点都已存在\n"
-    "- 如果某个节点已存在，跳过插入\n"
-    "- 遇到错误时记录并继续，不要中断流程\n"
+    "2. 使用 InsertGraphTool 批量插入所有实体和关系\n"
+    "3. 完成后告知用户结果\n\n"
+    "注意：InsertGraphTool 会一次性完成所有插入，无需逐个节点或关系单独调用。\n"
+    "遇到错误时记录并继续，不要中断流程。\n"
 )
 
 
@@ -166,16 +143,14 @@ class NL2CypherAgent(ReActAgent):
         client: Neo4jClient,
         name: str = "NL2CypherAgent",
         system_prompt: Optional[str] = None,
-        max_iterations: int = 10,
+        max_iterations: int = 5,
         **kwargs: Any,
     ):
         llm = get_default_qwen_llm()
 
         tools = [
             ExtractGraphTool(),
-            CheckNodeTool(client),
-            InsertNodeTool(client),
-            InsertRelationTool(client),
+            InsertGraphTool(client),
         ]
 
         super().__init__(
