@@ -82,11 +82,25 @@ class Neo4jClient:
         :param rel_props: 关系属性字典
         """
         rp = rel_props or {}
+        # Neo4j 不支持在 MATCH 中使用参数化属性字典，需展开为 WHERE 子句
+        from_where = " AND ".join(f"a.{k} = $from_{k}" for k in from_props)
+        to_where = " AND ".join(f"b.{k} = $to_{k}" for k in to_props)
+
+        if from_where:
+            from_where = " WHERE " + from_where
+        if to_where:
+            to_where = (" AND " if from_where else " WHERE ") + to_where
+
+        rel_props_str = "$rel_props" if rp else ""
         cypher = (
-            f"MATCH (a:{from_label} $from_props), (b:{to_label} $to_props) "
-            f"CREATE (a)-[r:{rel_type} $rel_props]->(b) RETURN r"
+            f"MATCH (a:{from_label}){from_where}{to_where} "
+            f"CREATE (a)-[r:{rel_type} {rel_props_str}]->(b) RETURN r"
         )
-        return self.run(cypher, {"from_props": from_props, "to_props": to_props, "rel_props": rp})
+        params = {f"from_{k}": v for k, v in from_props.items()}
+        params.update({f"to_{k}": v for k, v in to_props.items()})
+        if rp:
+            params["rel_props"] = rp
+        return self.run(cypher, params)
 
     # ──────────────── 查 ────────────────
 
