@@ -189,3 +189,53 @@ class NL2CypherAgent(ReActAgent):
         )
 
         self._client = client
+
+    def run(self, user_input: str, user_id: Optional[str] = None, session_id: Optional[str] = None, **kwargs: Any) -> "AgentResult":
+        """
+        覆盖基类 run，增加调用日志记录。
+
+        Args:
+            user_input: 用户输入文本
+            user_id: 用户 ID（可选）
+            session_id: 会话 ID（可选）
+            **kwargs: 额外参数
+        """
+        from Base.Ai.base.baseAgent import AgentResult
+        from Base.Models.baseAgentCallLogModel import BaseAgentCallLog
+
+        start_time = time.time()
+
+        # 创建调用记录
+        input_data = json.dumps({"text": user_input, "schema": kwargs.get("schema")}, ensure_ascii=False)
+        call_log = BaseAgentCallLog(
+            agent_name=self.name,
+            user_id=user_id,
+            session_id=session_id,
+            input_data=input_data,
+            ai_model=self.llm.model_name,
+        )
+        call_log.save()
+
+        try:
+            result = super().run(user_input, **kwargs)
+            output_data = json.dumps({
+                "output": result.output,
+                "success": result.success,
+                "tool_calls": len(result.tool_calls),
+            }, ensure_ascii=False)
+            call_log.output_data = output_data
+            call_log.status = "success" if result.success else "failed"
+            if result.error_msg:
+                call_log.error_msg = result.error_msg
+            call_log.duration_ms = result.duration_ms
+            call_log.iterations = result.iterations
+            call_log.save()
+
+            return result
+
+        except Exception as e:
+            call_log.status = "failed"
+            call_log.error_msg = str(e)
+            call_log.duration_ms = int((time.time() - start_time) * 1000)
+            call_log.save()
+            raise
