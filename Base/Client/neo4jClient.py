@@ -86,14 +86,16 @@ class Neo4jClient:
         from_where = " AND ".join(f"a.{k} = $from_{k}" for k in from_props)
         to_where = " AND ".join(f"b.{k} = $to_{k}" for k in to_props)
 
+        where_parts = []
         if from_where:
-            from_where = " WHERE " + from_where
+            where_parts.append(from_where)
         if to_where:
-            to_where = (" AND " if from_where else " WHERE ") + to_where
+            where_parts.append(to_where)
+        where_clause = " WHERE " + " AND ".join(where_parts) if where_parts else ""
 
         rel_props_str = "$rel_props" if rp else ""
         cypher = (
-            f"MATCH (a:{from_label}){from_where}{to_where} "
+            f"MATCH (a:{from_label}), (b:{to_label}){where_clause} "
             f"CREATE (a)-[r:{rel_type} {rel_props_str}]->(b) RETURN r"
         )
         params = {f"from_{k}": v for k, v in from_props.items()}
