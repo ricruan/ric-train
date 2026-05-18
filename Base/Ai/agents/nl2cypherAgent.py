@@ -15,7 +15,6 @@ from Base.Ai.base.baseAgent import ReActAgent
 from Base.Ai.base.baseTool import BaseTool
 from Base.Ai.llms.qwenLlm import get_default_qwen_llm
 from Base.Client.neo4jClient import Neo4jClient
-from Base.Models.graphModel import Entity, Relation
 from Base.Service.neo4jService import parse_nl_2_graph
 
 logger = logging.getLogger(__name__)
@@ -188,8 +187,6 @@ class NL2CypherAgent(ReActAgent):
             **kwargs,
         )
 
-        self._client = client
-
     def run(self, user_input: str, user_id: Optional[str] = None, session_id: Optional[str] = None, **kwargs: Any) -> "AgentResult":
         """
         覆盖基类 run，增加调用日志记录。
@@ -219,16 +216,14 @@ class NL2CypherAgent(ReActAgent):
         try:
             result = super().run(user_input, **kwargs)
             output_data = json.dumps({
-                "output": result.output,
+                "output": result.output[:500] if result.output else "",
                 "success": result.success,
-                "tool_calls": len(result.tool_calls),
             }, ensure_ascii=False)
             call_log.output_data = output_data
             call_log.status = "success" if result.success else "failed"
             if result.error_msg:
                 call_log.error_msg = result.error_msg
             call_log.duration_ms = result.duration_ms
-            call_log.iterations = result.iterations
             call_log.save()
 
             return result
@@ -252,8 +247,7 @@ if __name__ == "__main__":
     print("=== Agent 模式 ===")
     result = agent.run("马云创立了阿里巴巴，总部在杭州", user_id="test_user", session_id="test_session")
     print(f"成功: {result.success}")
-    print(f"输出: {result.output[:200]}")
+    print(f"输出: {result.output[:200] if result.output else '(空)'}")
     print(f"耗时: {result.duration_ms}ms")
-    print(f"工具调用: {len(result.tool_calls)} 次")
 
     client.close()

@@ -189,8 +189,8 @@ class Neo4jService:
             return result
 
         # 去重：用 (label, json.dumps(properties, sort_keys=True)) 作为唯一键
+        # 注意：此去重仅在单次调用内生效。跨调用去重需使用 Agent 模式（CheckNodeTool）
         seen_entities = set()
-        entity_map = {}  # (label, property_str) -> Neo4j 返回的节点
 
         for entity in entities:
             key = (entity.label, json.dumps(entity.properties, sort_keys=True, ensure_ascii=False))
@@ -202,7 +202,6 @@ class Neo4jService:
             try:
                 created = self.client.create_node(entity.label, entity.properties)
                 if created:
-                    entity_map[key] = created[0]
                     result.entities_created += 1
                 else:
                     result.entities_skipped.append(f"插入失败: {entity.label} {entity.properties}")
