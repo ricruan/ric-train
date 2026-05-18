@@ -143,6 +143,8 @@ dmypy.json
 # Claude Code
 .claude/
 CLAUDE.md
+.agents/
+docs/
 
 # Claude Workspace (AI 助手临时生成内容)
 .claude-workspace/

@@ -1,4 +1,5 @@
 from Base.Ai.base.baseMessages import BaseMessages
+from Base.Ai.base.baseEnum import LLMTypeEnum, AgentParadigmEnum
 
 UserMessages = BaseMessages.get_user_messages
 AssistantMessages = BaseMessages.get_assistant_messages
@@ -7,9 +8,13 @@ DeveloperMessages = BaseMessages.get_developer_messages
 ToolMessages = BaseMessages.get_tool_messages
 FunctionMessages = BaseMessages.get_function_messages
 
-__all__ = ["UserMessages",
-           "AssistantMessages",
-           "SystemMessages",
-           "DeveloperMessages",
-           "ToolMessages",
-           "FunctionMessages"]
+__all__ = [
+    "UserMessages",
+    "AssistantMessages",
+    "SystemMessages",
+    "DeveloperMessages",
+    "ToolMessages",
+    "FunctionMessages",
+    "LLMTypeEnum",
+    "AgentParadigmEnum",
+]

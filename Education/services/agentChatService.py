@@ -9,7 +9,7 @@ from Base.Ai.llms.qwenLlm import get_default_qwen_llm
 from Base.RicUtils.httpUtils import HttpResponse
 from Base.Models.BaseLLMConversationModel import BaseLLMConversationModel
 from Base.Service.llmConversationService import save_conversation_from_db_2_vdb
-from Base.Service.MemoryV1Service import MemoryV1Service
+from Base.Service.memoryV1Service import MemoryV1Service
 from Base.Models.BaseLLMSession import BaseLLMSession
 from Education.prompts.agentPrompts import (
     get_intent_recognition_messages,

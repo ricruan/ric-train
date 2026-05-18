@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+// @ts-ignore
 import path from 'node:path';
 
 export default defineConfig({
@@ -13,7 +14,7 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/interview': {
-        target: 'http://localhost:8001',
+        target: 'http://localhost:8002',
         changeOrigin: true,
       },
     },

@@ -13,7 +13,7 @@ from Base.Ai.llms.qwenLlm import QwenLlm
 from Base.Models.BaseLLMConversationModel import BaseLLMConversationModel
 from Base.Models.BaseLLMSession import BaseLLMSession
 from Base.RicUtils.httpUtils import HttpResponse
-from Base.Service.MemoryV1Service import MemoryV1Service
+from Base.Service.memoryV1Service import MemoryV1Service
 from Base.Service.aiService import AiService, AuditingTextError
 from Base.Service.keywordService import keyword_replace_question
 from Base.Service.llmConversationService import save_conversation_from_db_2_vdb, save_conversation_from_db_2_vdb_only_data
