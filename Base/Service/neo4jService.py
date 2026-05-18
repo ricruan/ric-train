@@ -240,3 +240,31 @@ class Neo4jService:
                 result.relations_skipped.append(f"{rel.rel_type}: {e}")
 
         return result
+
+
+if __name__ == "__main__":
+    """集成测试：真实 Neo4j + LLM 端到端"""
+    from Base.Config.logConfig import setup_logging
+    setup_logging()
+
+    svc = Neo4jService()
+
+    print("=== 轻量模式：抽取 ===")
+    entities, relations = svc.extract_graph("马云创立了阿里巴巴，总部在杭州")
+    print(f"实体: {len(entities)} 条")
+    for e in entities:
+        print(f"  {e.label}: {e.properties}")
+    print(f"关系: {len(relations)} 条")
+    for r in relations:
+        print(f"  {r.from_entity.properties.get('name', '?')} -[{r.rel_type}]-> {r.to_entity.properties.get('name', '?')}")
+
+    print("\n=== 轻量模式：抽取 + 插入 ===")
+    result = svc.extract_and_insert("马斯克创立了 SpaceX 和 Tesla")
+    print(f"实体创建: {result.entities_created}")
+    print(f"关系创建: {result.relations_created}")
+    if result.entities_skipped:
+        print(f"跳过实体: {result.entities_skipped}")
+    if result.relations_skipped:
+        print(f"跳过关系: {result.relations_skipped}")
+    if result.error:
+        print(f"错误: {result.error}")

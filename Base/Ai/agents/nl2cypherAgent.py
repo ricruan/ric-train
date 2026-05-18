@@ -239,3 +239,21 @@ class NL2CypherAgent(ReActAgent):
             call_log.duration_ms = int((time.time() - start_time) * 1000)
             call_log.save()
             raise
+
+
+if __name__ == "__main__":
+    """集成测试：Agent 模式"""
+    from Base.Config.logConfig import setup_logging
+    setup_logging()
+
+    client = Neo4jClient()
+    agent = NL2CypherAgent(client=client)
+
+    print("=== Agent 模式 ===")
+    result = agent.run("马云创立了阿里巴巴，总部在杭州", user_id="test_user", session_id="test_session")
+    print(f"成功: {result.success}")
+    print(f"输出: {result.output[:200]}")
+    print(f"耗时: {result.duration_ms}ms")
+    print(f"工具调用: {len(result.tool_calls)} 次")
+
+    client.close()
