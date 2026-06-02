@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { submitAnalysis } from '@/api/analysis';
 
 const IconUpload = () => (
@@ -15,20 +15,36 @@ export default function InterviewAnalysis() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const submittingRef = useRef(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!audioFile || !resumeFile) return;
+
+    // 防重复提交：ref 比 state 更可靠，不受 React 异步批处理影响
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setLoading(true);
+    setResult(null);
+
+    if (!audioFile || !resumeFile) {
+      submittingRef.current = false;
+      setLoading(false);
+      return;
+    }
 
     const trimmedName = userName.trim();
     const trimmedCompany = companyName.trim();
 
     if (/^[a-zA-Z\s]+$/.test(trimmedName)) {
       setResult({ message: '用户名不能为纯英文，请输入中文或其他语言', type: 'error' });
+      submittingRef.current = false;
+      setLoading(false);
       return;
     }
     if (/^[a-zA-Z\s]+$/.test(trimmedCompany)) {
       setResult({ message: '公司名称不能为纯英文，请输入中文或其他语言', type: 'error' });
+      submittingRef.current = false;
+      setLoading(false);
       return;
     }
 
@@ -38,9 +54,6 @@ export default function InterviewAnalysis() {
     formData.append('company_name', trimmedCompany);
     formData.append('audio_file', audioFile);
     formData.append('resume_file', resumeFile);
-
-    setLoading(true);
-    setResult(null);
 
     try {
       const res = await submitAnalysis(formData);
@@ -53,6 +66,7 @@ export default function InterviewAnalysis() {
     } catch {
       setResult({ message: '网络错误，请检查网络连接后重试', type: 'error' });
     } finally {
+      submittingRef.current = false;
       setLoading(false);
     }
   };

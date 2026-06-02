@@ -303,7 +303,7 @@ export default function InterviewRecordManager() {
   const doSearch = useCallback(() => {
     setPage(1);
     loadRecords(1, pageSize);
-  }, [pageSize]);
+  }, [pageSize, searchUser, searchCompany, searchEmail, searchStatus, searchDateStart, searchDateEnd]);
 
   const loadRecords = async (p: number, ps: number) => {
     setLoading(true);
