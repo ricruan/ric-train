@@ -11,14 +11,15 @@
             box-sizing: border-box;
         }
 
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 20px;
         }
 
         .container {
@@ -26,21 +27,23 @@
             backdrop-filter: blur(10px);
             border-radius: 20px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            padding: 40px;
-            max-width: 600px;
+            padding: 24px 40px;
             width: 100%;
+            max-width: 800px;
+            max-height: 95vh;
+            overflow-y: hidden;
         }
 
         .title {
             text-align: center;
             color: #333;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             font-size: 28px;
             font-weight: 600;
         }
 
         .form-group {
-            margin-bottom: 25px;
+            margin-bottom: 16px;
         }
 
         label {
