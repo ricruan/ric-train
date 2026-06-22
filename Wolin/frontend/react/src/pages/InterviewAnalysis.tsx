@@ -80,40 +80,46 @@ export default function InterviewAnalysis() {
         <h1 className="title">面试分析系统</h1>
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group animate-in">
-            <label htmlFor="email">接收邮箱</label>
-            <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="请输入接收分析结果的邮箱" />
-          </div>
+          <div className="form-row">
+            <div className="form-group animate-in">
+              <label htmlFor="email">接收邮箱</label>
+              <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="请输入接收分析结果的邮箱" />
+            </div>
 
-          <div className="form-group animate-in">
-            <label htmlFor="userName">用户名</label>
-            <input id="userName" type="text" value={userName} onChange={(e) => setUserName(e.target.value)} required placeholder="请输入用户名" />
-          </div>
-
-          <div className="form-group animate-in">
-            <label htmlFor="companyName">公司名称</label>
-            <input id="companyName" type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="请输入公司名称" />
-          </div>
-
-          <div className="form-group animate-in">
-            <label>音频文件</label>
-            <div className="file-input-wrapper">
-              <input type="file" accept="audio/*,.m4a,.m4b,.caf,.aac,.ogg,.flac,.amr" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} className="file-input" id="audioInput" />
-              <label htmlFor="audioInput" className={`file-input-label ${audioFile ? 'has-file' : ''}`}>
-                <IconUpload />
-                {fileLabel(audioFile, '点击选择音频文件 (mp3, wav, m4a, caf 等)')}
-              </label>
+            <div className="form-group animate-in">
+              <label htmlFor="userName">用户名</label>
+              <input id="userName" type="text" value={userName} onChange={(e) => setUserName(e.target.value)} required placeholder="请输入用户名" />
             </div>
           </div>
 
-          <div className="form-group animate-in">
-            <label>简历文件</label>
-            <div className="file-input-wrapper">
-              <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setResumeFile(e.target.files?.[0] || null)} className="file-input" id="resumeInput" />
-              <label htmlFor="resumeInput" className={`file-input-label ${resumeFile ? 'has-file' : ''}`}>
-                <IconUpload />
-                {fileLabel(resumeFile, '点击选择简历文件 (PDF, DOC, DOCX)')}
-              </label>
+          <div className="form-row full">
+            <div className="form-group animate-in">
+              <label htmlFor="companyName">公司名称</label>
+              <input id="companyName" type="text" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="请输入公司名称" />
+            </div>
+          </div>
+
+          <div className="upload-row">
+            <div className="form-group animate-in">
+              <label>音频文件</label>
+              <div className="file-input-wrapper">
+                <input type="file" accept="audio/*,.m4a,.m4b,.caf,.aac,.ogg,.flac,.amr" onChange={(e) => setAudioFile(e.target.files?.[0] || null)} className="file-input" id="audioInput" />
+                <label htmlFor="audioInput" className={`file-input-label ${audioFile ? 'has-file' : ''}`}>
+                  <IconUpload />
+                  {fileLabel(audioFile, '点击选择音频文件 (mp3, wav, m4a, caf 等)')}
+                </label>
+              </div>
+            </div>
+
+            <div className="form-group animate-in">
+              <label>简历文件</label>
+              <div className="file-input-wrapper">
+                <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => setResumeFile(e.target.files?.[0] || null)} className="file-input" id="resumeInput" />
+                <label htmlFor="resumeInput" className={`file-input-label ${resumeFile ? 'has-file' : ''}`}>
+                  <IconUpload />
+                  {fileLabel(resumeFile, '点击选择简历文件 (PDF, DOC, DOCX)')}
+                </label>
+              </div>
             </div>
           </div>
 

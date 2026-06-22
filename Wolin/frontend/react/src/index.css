@@ -139,9 +139,6 @@ input, select, textarea, button { font-family: inherit; }
   backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
 .nav-brand {
@@ -189,7 +186,10 @@ input, select, textarea, button { font-family: inherit; }
 
 /* ========== Page Base ========== */
 
-/* Page fills remaining viewport, no scroll on body */
+/* Page fills remaining viewport, no scroll on body.
+   NOTE: overflow: hidden means each page MUST provide its own inner scroll container
+   (e.g. .chat-messages, .table-wrapper with overflow-y: auto).
+   Adding a new page without an inner scroll wrapper will silently clip content. */
 .page {
   flex: 1;
   min-height: 0;
@@ -226,7 +226,7 @@ input, select, textarea, button { font-family: inherit; }
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-card);
-  padding: 36px;
+  padding: 28px 32px;
 }
 
 /* ========== Form ========== */
@@ -283,7 +283,7 @@ input, select, textarea, button { font-family: inherit; }
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 28px 20px;
+  padding: 20px 16px;
   background: var(--bg-input);
   border: 2px dashed var(--border-color);
   border-radius: var(--radius-md);
@@ -291,7 +291,8 @@ input, select, textarea, button { font-family: inherit; }
   text-align: center;
   transition: all var(--transition-normal);
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 13px;
+  min-height: 80px;
 }
 
 .file-input-label:hover {
@@ -427,23 +428,26 @@ input, select, textarea, button { font-family: inherit; }
 .analysis-page {
   background: var(--bg-primary);
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
   padding: 24px;
+  gap: 0;
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
 }
 
 .analysis-page .container {
-  max-width: 640px;
+  max-width: 100%;
   width: 100%;
+  max-width: 900px;
 }
 
 .analysis-page .title {
   text-align: center;
   font-size: 32px;
   font-weight: 700;
-  margin-bottom: 32px;
+  margin-bottom: 28px;
   background: var(--gradient-main);
   background-size: 200% auto;
   -webkit-background-clip: text;
@@ -453,18 +457,94 @@ input, select, textarea, button { font-family: inherit; }
   letter-spacing: -0.5px;
 }
 
-/* ========== Camera Test ========== */
-
-.main-layout {
+/* Form grid layout for analysis page */
+.analysis-page form {
   display: flex;
-  gap: 28px;
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.video-panel { flex: 1; min-width: 0; }
+.analysis-page .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.analysis-page .form-row.full {
+  grid-template-columns: 1fr;
+}
+
+/* Upload grid - side by side */
+.analysis-page .upload-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .analysis-page .form-row,
+  .analysis-page .upload-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== Camera Test ========== */
+
+.camera-test-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 20px 24px;
+  width: 100%;
+  overflow: auto;
+}
+
+.camera-test-page h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.camera-test-page .subtitle {
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 400;
+  flex-shrink: 0;
+}
+
+.main-layout {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 24px;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  align-items: flex-start;
+  flex: 1;
+  min-height: 0;
+}
+
+.video-panel {
+  flex: 0 0 480px !important;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.text-panel {
+  flex: 1 !important;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+}
 
 .video-container {
   background: var(--bg-secondary);
@@ -474,6 +554,7 @@ input, select, textarea, button { font-family: inherit; }
   box-shadow: var(--shadow-card);
   aspect-ratio: 16 / 10;
   position: relative;
+  flex-shrink: 0;
 }
 
 .video-container video { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -500,7 +581,12 @@ input, select, textarea, button { font-family: inherit; }
 
 .placeholder svg { width: 56px; height: 56px; opacity: 0.4; }
 
-.controls { margin-top: 20px; display: flex; gap: 12px; }
+.controls {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
 
 /* Button Variants */
 .btn-primary {
@@ -514,6 +600,7 @@ input, select, textarea, button { font-family: inherit; }
   color: var(--text-on-accent);
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-btn);
+  flex-shrink: 0;
 }
 .btn-primary:hover:not(:disabled) {
   background: var(--gradient-btn-hover);
@@ -556,8 +643,6 @@ input, select, textarea, button { font-family: inherit; }
 .record-btn.recording { animation: recording-pulse 1.5s infinite; }
 .record-btn.full { width: 100%; }
 
-/* Transcript Panel */
-.text-panel { flex: 1; min-width: 0; }
 .text-panel h2 {
   color: var(--text-primary);
   font-size: 16px;
@@ -566,6 +651,7 @@ input, select, textarea, button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .text-panel h2::before {
@@ -582,8 +668,8 @@ input, select, textarea, button { font-family: inherit; }
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   padding: 18px;
-  min-height: 300px;
-  max-height: 500px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   font-size: 14px;
   line-height: 1.7;
@@ -675,7 +761,8 @@ input, select, textarea, button { font-family: inherit; }
   box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  height: 560px;
+  height: 100%;
+  max-height: min(560px, calc(100vh - 180px));
   overflow: hidden;
 }
 
@@ -813,7 +900,6 @@ input, select, textarea, button { font-family: inherit; }
   min-height: 0;
   height: 0;
   width: 100%;
-  padding: 10px;
 }
 
 /* Camera panel */
@@ -826,7 +912,7 @@ input, select, textarea, button { font-family: inherit; }
   background: var(--bg-primary);
   gap: 14px;
   min-height: 0;
-  padding: 16px;
+  padding: 16px 10px 16px 16px;
 }
 
 .camera-frame {
@@ -900,6 +986,7 @@ input, select, textarea, button { font-family: inherit; }
   min-height: 0;
   border-left: 1px solid var(--border-color);
   background: var(--bg-secondary);
+  padding: 0 16px 0 0;
 }
 
 .console-chat .chat-header {
@@ -1296,7 +1383,7 @@ tbody tr:hover { background: rgba(0, 212, 255, 0.03); }
   border-radius: var(--radius-xl);
   width: 90%;
   max-width: 720px;
-  max-height: min(85vh, calc(100vh - 128px));
+  max-height: min(80vh, calc(100vh - 64px - 40px));
   overflow-y: auto;
   padding: 32px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.5);
@@ -1934,6 +2021,10 @@ tbody tr:hover { background: rgba(0, 212, 255, 0.03); }
 .file-btn:hover { background: rgba(0, 212, 255, 0.1); box-shadow: 0 0 15px rgba(0, 212, 255, 0.15); }
 
 /* ========== Responsive ========== */
+
+@media (max-width: 1100px) {
+  .camera-panel { flex: 0 0 320px; }
+}
 
 @media (max-width: 900px) {
   .main-layout { flex-direction: column; }
