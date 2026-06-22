@@ -28,6 +28,7 @@ class InterviewRecordPo(WolinModuleDBModel):
             `audio_file_path` VARCHAR(500) COMMENT '原始音频文件路径',
             `audio_duration` INT UNSIGNED COMMENT '音频时长（秒）',
             `audio_text_path` VARCHAR(500) COMMENT 'ASR 转写文本路径',
+            `audio_text_origin_path` VARCHAR(500) COMMENT 'ASR 原始转写文本路径',
             `resume_file_path` VARCHAR(500) COMMENT '简历文件路径',
             `report_file_path` VARCHAR(500) COMMENT '面试报告路径',
 
@@ -77,6 +78,7 @@ class InterviewRecordPo(WolinModuleDBModel):
     audio_file_path: Optional[str] = Field(None, description="原始音频文件路径")
     audio_duration: Optional[int] = Field(None, description="音频时长（秒）")
     audio_text_path: Optional[str] = Field(None, description="ASR 转写文本路径")
+    audio_text_origin_path: Optional[str] = Field(None, description="ASR 原始转写文本路径")
     resume_file_path: Optional[str] = Field(None, description="简历文件路径")
     report_file_path: Optional[str] = Field(None, description="面试报告路径")
 

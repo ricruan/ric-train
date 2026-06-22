@@ -107,6 +107,8 @@ class InterviewRecordService:
                     logger.info(f"更新 audio_text，长度：{len(state.asr_info.audio_text)}")
                 if getattr(state, 'audio_text_path', None):
                     update_data['audio_text_path'] = state.audio_text_path
+                if getattr(state, 'audio_text_origin_path', None):
+                    update_data['audio_text_origin_path'] = state.audio_text_origin_path
                 if state.asr_info.qa_pairs:
                     update_data['qa_pairs'] = json.dumps(state.asr_info.qa_pairs, ensure_ascii=False)
 
