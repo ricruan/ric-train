@@ -8,7 +8,12 @@ ADD COLUMN `prompt_tokens` INT UNSIGNED DEFAULT 0 COMMENT 'Prompt tokens 消耗'
 ADD COLUMN `completion_tokens` INT UNSIGNED DEFAULT 0 COMMENT 'Completion tokens 消耗' AFTER `prompt_tokens`,
 ADD COLUMN `total_tokens` INT UNSIGNED DEFAULT 0 COMMENT '总 tokens 消耗' AFTER `completion_tokens`;
 
--- 2. 创建 base_agent_eval_log 表
+-- 2. 修改 base_agent_tool_call_log 表，添加创建时间字段
+ALTER TABLE `base_agent_tool_call_log`
+ADD COLUMN `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间' AFTER `call_order`,
+ADD INDEX `idx_created_at` (`created_at`);
+
+-- 3. 创建 base_agent_eval_log 表
 CREATE TABLE `base_agent_eval_log` (
     `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
     `agent_call_id` BIGINT UNSIGNED COMMENT 'FK → base_agent_call_log.id',

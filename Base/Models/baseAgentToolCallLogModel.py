@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional, ClassVar
 
 from pydantic import Field
@@ -21,9 +22,11 @@ class BaseAgentToolCallLog(BaseModuleDBModel):
             `error_msg` TEXT COMMENT '工具级错误信息',
             `duration_ms` INT UNSIGNED COMMENT '工具耗时（毫秒）',
             `call_order` INT UNSIGNED COMMENT '调用顺序',
+            `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
             PRIMARY KEY (`id`),
             KEY `idx_agent_call_id` (`agent_call_id`),
-            KEY `idx_tool_name` (`tool_name`)
+            KEY `idx_tool_name` (`tool_name`),
+            KEY `idx_created_at` (`created_at`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agent 工具调用明细表';
     """
 
@@ -36,3 +39,4 @@ class BaseAgentToolCallLog(BaseModuleDBModel):
     error_msg: Optional[str] = Field(None, description="工具级错误信息")
     duration_ms: Optional[int] = Field(None, description="工具耗时（毫秒）")
     call_order: Optional[int] = Field(None, description="调用顺序")
+    created_at: Optional[datetime] = Field(None, description="创建时间")
