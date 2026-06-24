@@ -231,6 +231,11 @@ class BaseAgent(ABC):
         # 中间件链
         self._middleware_chain = MiddlewareChain()
 
+        # Token 使用统计（由 _call_llm 和 _acall_llm 更新）
+        self._last_token_usage: Dict[str, int] = {}
+        # 累计 token 使用（由 _run_loop 管理）
+        self._total_token_usage: Dict[str, int] = {}
+
     # ---- 工具管理 ----
 
     def add_tool(self, tool: BaseTool):
@@ -309,6 +314,7 @@ class BaseAgent(ABC):
             output = self._run_loop(messages, **kwargs)
             result.output = output
             result.success = True
+            result.token_usage = self._total_token_usage.copy() if self._total_token_usage else None
 
             logger.info(f"Agent [{self.name}] 执行完成, 输出长度: {len(output)}")
 
@@ -381,6 +387,7 @@ class BaseAgent(ABC):
             output = await self._arun_loop(messages, **kwargs)
             result.output = output
             result.success = True
+            result.token_usage = self._total_token_usage.copy() if self._total_token_usage else None
 
         except Exception as e:
             logger.error(f"Agent [{self.name}] 异步执行失败: {e}", exc_info=True)
@@ -447,12 +454,21 @@ class BaseAgent(ABC):
         iteration = 0
         final_text = ""
 
+        # 重置累计 token 使用
+        self._total_token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
         while iteration < self.max_iterations:
             iteration += 1
             logger.debug(f"Agent [{self.name}] 第 {iteration} 轮循环")
 
             # 调用 LLM
             response = self._call_llm(messages)
+
+            # 累计 token 使用
+            if self._last_token_usage:
+                self._total_token_usage["prompt_tokens"] += self._last_token_usage.get("prompt_tokens", 0)
+                self._total_token_usage["completion_tokens"] += self._last_token_usage.get("completion_tokens", 0)
+                self._total_token_usage["total_tokens"] += self._last_token_usage.get("total_tokens", 0)
 
             # 检查是否有 tool_calls
             tool_calls = self._extract_tool_calls(response)
@@ -490,11 +506,20 @@ class BaseAgent(ABC):
         iteration = 0
         final_text = ""
 
+        # 重置累计 token 使用
+        self._total_token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
         while iteration < self.max_iterations:
             iteration += 1
             logger.debug(f"Agent [{self.name}] 异步第 {iteration} 轮循环")
 
             response = await self._acall_llm(messages)
+
+            # 累计 token 使用
+            if self._last_token_usage:
+                self._total_token_usage["prompt_tokens"] += self._last_token_usage.get("prompt_tokens", 0)
+                self._total_token_usage["completion_tokens"] += self._last_token_usage.get("completion_tokens", 0)
+                self._total_token_usage["total_tokens"] += self._last_token_usage.get("total_tokens", 0)
 
             tool_calls = self._extract_tool_calls(response)
             if not tool_calls:
@@ -533,7 +558,17 @@ class BaseAgent(ABC):
         if tools:
             kwargs["tools"] = tools
 
-        return self.llm.model_client.chat.completions.create(**kwargs)
+        response = self.llm.model_client.chat.completions.create(**kwargs)
+
+        # 提取 token 使用信息
+        if hasattr(response, 'usage') and response.usage:
+            self._last_token_usage = {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens,
+            }
+
+        return response
 
     async def _acall_llm(self, messages: List[Dict[str, Any]]) -> Any:
         """
@@ -553,7 +588,17 @@ class BaseAgent(ABC):
         if tools:
             kwargs["tools"] = tools
 
-        return await self.llm.async_model_client.chat.completions.create(**kwargs)
+        response = await self.llm.async_model_client.chat.completions.create(**kwargs)
+
+        # 提取 token 使用信息
+        if hasattr(response, 'usage') and response.usage:
+            self._last_token_usage = {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens,
+            }
+
+        return response
 
     # ---- 响应解析 ----
 

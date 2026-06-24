@@ -24,6 +24,9 @@ class BaseAgentCallLog(BaseModuleDBModel):
             `duration_ms` INT UNSIGNED COMMENT '总耗时（毫秒）',
             `iterations` INT UNSIGNED COMMENT '工具调用循环次数',
             `ai_model` VARCHAR(100) COMMENT '使用的 LLM 模型名称',
+            `prompt_tokens` INT UNSIGNED DEFAULT 0 COMMENT 'Prompt tokens 消耗',
+            `completion_tokens` INT UNSIGNED DEFAULT 0 COMMENT 'Completion tokens 消耗',
+            `total_tokens` INT UNSIGNED DEFAULT 0 COMMENT '总 tokens 消耗',
             `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
             PRIMARY KEY (`id`),
             KEY `idx_agent_name` (`agent_name`),
@@ -45,6 +48,9 @@ class BaseAgentCallLog(BaseModuleDBModel):
     duration_ms: Optional[int] = Field(None, description="总耗时（毫秒）")
     iterations: Optional[int] = Field(None, description="工具调用循环次数")
     ai_model: Optional[str] = Field(None, description="使用的 LLM 模型名称")
+    prompt_tokens: Optional[int] = Field(0, description="Prompt tokens 消耗")
+    completion_tokens: Optional[int] = Field(0, description="Completion tokens 消耗")
+    total_tokens: Optional[int] = Field(0, description="总 tokens 消耗")
     created_at: Optional[datetime] = Field(None, description="创建时间")
 
     def get_tool_calls(self) -> List["BaseAgentToolCallLog"]:
