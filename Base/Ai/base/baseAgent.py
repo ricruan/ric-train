@@ -192,6 +192,7 @@ class BaseAgent(ABC):
         session_id: Optional[str] = None,
         max_iterations: int = 10,
         paradigm: Optional[AgentParadigmEnum] = None,
+        middlewares: Optional[List[Any]] = None,
         **kwargs: Any,
     ):
         """
@@ -207,6 +208,7 @@ class BaseAgent(ABC):
             session_id: 会话 ID（用于 DBMemory）
             max_iterations: 单次运行最大循环次数（防止死循环）
             paradigm: 执行范式
+            middlewares: 中间件列表（按顺序注册）
         """
         self.llm = llm
         self.name = name or self.__class__.__name__
@@ -230,6 +232,11 @@ class BaseAgent(ABC):
 
         # 中间件链
         self._middleware_chain = MiddlewareChain()
+
+        # 注册中间件（如果在初始化时提供）
+        if middlewares:
+            for mw in middlewares:
+                self.use(mw)
 
         # Token 使用统计（由 _call_llm 和 _acall_llm 更新）
         self._last_token_usage: Dict[str, int] = {}
