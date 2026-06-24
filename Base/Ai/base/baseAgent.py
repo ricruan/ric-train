@@ -14,6 +14,8 @@ from Base.Ai.base.baseEnum import AgentParadigmEnum
 from Base.Ai.base.baseLlm import BaseLlm
 from Base.Ai.base.baseTool import BaseTool
 from Base.Ai.base.baseMessages import BaseMessages
+from Base.Ai.middlewares.base import AgentContext, MiddlewareChain
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -160,6 +162,8 @@ class AgentResult(BaseModel):
     iterations: int = 0
     duration_ms: int = 0
     error_msg: Optional[str] = None
+    token_usage: Optional[Dict[str, int]] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 # ============================================================================
@@ -224,6 +228,9 @@ class BaseAgent(ABC):
         else:
             self.memory = InMemoryMemory()
 
+        # 中间件链
+        self._middleware_chain = MiddlewareChain()
+
     # ---- 工具管理 ----
 
     def add_tool(self, tool: BaseTool):
@@ -260,6 +267,15 @@ class BaseAgent(ABC):
         """清空记忆"""
         self.memory.clear()
 
+    def use(self, middleware):
+        """
+        注册中间件
+
+        Args:
+            middleware: Middleware 实例
+        """
+        self._middleware_chain.use(middleware)
+
     # ---- 入口方法 ----
 
     def run(self, user_input: str, **kwargs: Any) -> AgentResult:
@@ -273,6 +289,16 @@ class BaseAgent(ABC):
         Returns:
             AgentResult 运行结果
         """
+        # 如果有中间件，走中间件链
+        if self._middleware_chain.middlewares:
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            return loop.run_until_complete(self.arun(user_input, **kwargs))
+
         start_time = time.time()
         result = AgentResult()
 
@@ -306,6 +332,45 @@ class BaseAgent(ABC):
         Returns:
             AgentResult 运行结果
         """
+        # 如果有中间件，走中间件链
+        if self._middleware_chain.middlewares:
+            # 创建上下文
+            ctx = AgentContext(
+                user_input=user_input,
+                agent_name=self.name,
+                start_time=time.time(),
+                metadata=kwargs
+            )
+
+            # 定义核心处理逻辑
+            async def handler(ctx):
+                result = await self._arun_legacy(ctx.user_input, **ctx.metadata)
+                ctx.output = result.output
+                ctx.duration_ms = result.duration_ms
+                ctx.token_usage = result.token_usage or {}
+                ctx.tool_calls = result.tool_calls
+                if not result.success:
+                    ctx.error = Exception(result.error_msg)
+
+            # 执行中间件链
+            ctx = await self._middleware_chain.execute(ctx, handler)
+
+            # 构建返回结果
+            return AgentResult(
+                success=ctx.error is None,
+                output=ctx.output,
+                tool_calls=ctx.tool_calls,
+                duration_ms=ctx.duration_ms,
+                error_msg=str(ctx.error) if ctx.error else None,
+                token_usage=ctx.token_usage,
+                metadata=ctx.metadata
+            )
+
+        # 原有逻辑（重命名为 _arun_legacy）
+        return await self._arun_legacy(user_input, **kwargs)
+
+    async def _arun_legacy(self, user_input: str, **kwargs: Any) -> AgentResult:
+        """原有异步执行逻辑"""
         start_time = time.time()
         result = AgentResult()
 
