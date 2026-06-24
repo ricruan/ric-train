@@ -25,30 +25,47 @@
 
 ### 1.2 基础用法
 
+**方式一：初始化时注册（推荐）**
+
 ```python
 from Base.Ai.base.baseAgent import ReActAgent
 from Base.Ai.middlewares import (
     LoggingMiddleware,
     MetricsMiddleware,
     SafetyMiddleware,
-    EvalMiddleware,
 )
 
-# 创建你的 Agent
+# 创建 Agent 时直接注册中间件
+agent = ReActAgent(
+    llm=your_llm,
+    name="MyAgent",
+    tools=[your_tool],
+    middlewares=[
+        LoggingMiddleware(),
+        MetricsMiddleware(),
+        SafetyMiddleware(),
+    ],
+)
+
+# 运行 Agent
+result = agent.run("你的问题")
+print(result.output)
+```
+
+**方式二：后续注册**
+
+```python
+# 先创建 Agent
 agent = ReActAgent(
     llm=your_llm,
     name="MyAgent",
     tools=[your_tool],
 )
 
-# 注册中间件（按顺序）
+# 再注册中间件
 agent.use(LoggingMiddleware())
 agent.use(MetricsMiddleware())
 agent.use(SafetyMiddleware())
-
-# 运行 Agent
-result = agent.run("你的问题")
-print(result.output)
 ```
 
 ### 1.3 中间件执行顺序
@@ -439,17 +456,17 @@ from Base.Ai.middlewares import (
     SafetyMiddleware,
 )
 
-# 创建 Agent
+# 创建 Agent 并注册中间件
 agent = ReActAgent(
     llm=your_llm,
     name="StudentQueryAgent",
     tools=[search_tool, db_query_tool],
+    middlewares=[
+        LoggingMiddleware(log_dir="logs/agent"),
+        MetricsMiddleware(user_id="u123"),
+        SafetyMiddleware(),
+    ],
 )
-
-# 注册中间件
-agent.use(LoggingMiddleware(log_dir="logs/agent"))
-agent.use(MetricsMiddleware(user_id="u123"))
-agent.use(SafetyMiddleware())
 
 # 运行
 result = agent.run("查询张三的成绩")
@@ -473,63 +490,61 @@ from Base.Ai.middlewares import (
     LLMJudgeEvaluator,
 )
 
-# 创建 Agent
+# 创建 Agent 并一次性注册所有中间件
 agent = ReActAgent(
     llm=your_llm,
     name="ProductionAgent",
     tools=[search_tool, db_query_tool],
+    middlewares=[
+        # 1. 日志中间件
+        LoggingMiddleware(
+            log_dir="logs/production",
+            log_level="INFO",
+            max_body_length=2000,
+        ),
+        # 2. 指标中间件
+        MetricsMiddleware(
+            user_id=user_id,
+            session_id=session_id,
+            save_input=True,
+            save_output=True,
+        ),
+        # 3. 安全中间件
+        SafetyMiddleware(
+            input_guards=[
+                PromptInjectionDetector(
+                    custom_patterns=[r"自定义攻击模式"],
+                ),
+                SensitiveWordFilter(
+                    word_file="config/sensitive_words.txt",
+                ),
+            ],
+            output_guards=[
+                PIIMasker(
+                    enabled_types=["phone", "id_card", "email"],
+                    mask_strategy="partial",
+                ),
+            ],
+            tool_guards=[
+                ToolGuard(
+                    allowed_tools=["search", "query_db"],
+                    max_argument_length=10000,
+                ),
+            ],
+            log_violations=True,
+        ),
+        # 4. 评估中间件
+        EvalMiddleware(
+            evaluators=[
+                LLMJudgeEvaluator(
+                    judge_llm=judge_llm,
+                    dimensions=["accuracy", "relevance", "completeness"],
+                ),
+            ],
+            save_results=True,
+        ),
+    ],
 )
-
-# 1. 日志中间件
-agent.use(LoggingMiddleware(
-    log_dir="logs/production",
-    log_level="INFO",
-    max_body_length=2000,
-))
-
-# 2. 指标中间件
-agent.use(MetricsMiddleware(
-    user_id=user_id,
-    session_id=session_id,
-    save_input=True,
-    save_output=True,
-))
-
-# 3. 安全中间件
-agent.use(SafetyMiddleware(
-    input_guards=[
-        PromptInjectionDetector(
-            custom_patterns=[r"自定义攻击模式"],
-        ),
-        SensitiveWordFilter(
-            word_file="config/sensitive_words.txt",
-        ),
-    ],
-    output_guards=[
-        PIIMasker(
-            enabled_types=["phone", "id_card", "email"],
-            mask_strategy="partial",
-        ),
-    ],
-    tool_guards=[
-        ToolGuard(
-            allowed_tools=["search", "query_db"],
-            max_argument_length=10000,
-        ),
-    ],
-    log_violations=True,
-))
-
-# 4. 评估中间件
-agent.use(EvalMiddleware(
-    evaluators=[
-        LLMJudgeEvaluator(
-            judge_llm=judge_llm,
-            dimensions=["accuracy", "relevance", "completeness"],
-        ),
-    ],
-    save_results=True,
-))
 
 # 运行
 result = agent.run("查询学生信息")
