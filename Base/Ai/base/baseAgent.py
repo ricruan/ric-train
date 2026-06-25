@@ -301,15 +301,9 @@ class BaseAgent(ABC):
         Returns:
             AgentResult 运行结果
         """
-        # 如果有中间件，走中间件链
+        # 如果有中间件，走中间件链（但保持使用 _run_loop，确保子类的自定义逻辑被调用）
         if self._middleware_chain.middlewares:
-            import asyncio
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            return loop.run_until_complete(self.arun(user_input, **kwargs))
+            return self._run_with_middlewares(user_input, **kwargs)
 
         start_time = time.time()
         result = AgentResult()
@@ -333,6 +327,84 @@ class BaseAgent(ABC):
 
         result.duration_ms = int((time.time() - start_time) * 1000)
         return result
+
+    def _run_with_middlewares(self, user_input: str, **kwargs: Any) -> AgentResult:
+        """
+        同步执行中间件链（内部使用 _run_loop）
+
+        保证子类的 _run_loop 重写被正确调用，
+        同时支持中间件的 process_request / process_response。
+        """
+        import asyncio
+
+        start_time = time.time()
+
+        # 创建上下文
+        ctx = AgentContext(
+            user_input=user_input,
+            agent_name=self.name,
+            start_time=start_time,
+            metadata=kwargs,
+        )
+
+        # handler：使用同步 _run_loop
+        def sync_handler(ctx_inner):
+            messages = self._build_messages(ctx_inner.user_input)
+            logger.info(f"Agent [{self.name}] 开始执行（中间件模式）, 范式: {self.paradigm}")
+            output = self._run_loop(messages, **ctx_inner.metadata)
+            ctx_inner.output = output
+            ctx_inner.token_usage = self._total_token_usage.copy() if self._total_token_usage else {}
+            logger.info(f"Agent [{self.name}] 执行完成, 输出长度: {len(output)}")
+
+        async def async_handler(ctx_inner):
+            try:
+                sync_handler(ctx_inner)
+            except Exception as e:
+                ctx_inner.error = e
+
+        try:
+            # 执行中间件链
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # 如果已在事件循环中，创建新线程运行
+                    import concurrent.futures
+                    with concurrent.futures.ThreadPoolExecutor() as pool:
+                        ctx = pool.submit(
+                            asyncio.run,
+                            self._middleware_chain.execute(ctx, async_handler)
+                        ).result()
+                else:
+                    ctx = loop.run_until_complete(
+                        self._middleware_chain.execute(ctx, async_handler)
+                    )
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                ctx = loop.run_until_complete(
+                    self._middleware_chain.execute(ctx, async_handler)
+                )
+
+            # 构建返回结果
+            duration_ms = int((time.time() - start_time) * 1000)
+            return AgentResult(
+                success=ctx.error is None,
+                output=ctx.output,
+                duration_ms=duration_ms,
+                error_msg=str(ctx.error) if ctx.error else None,
+                token_usage=ctx.token_usage,
+                metadata=ctx.metadata,
+            )
+
+        except Exception as e:
+            logger.error(f"Agent [{self.name}] 中间件执行失败: {e}", exc_info=True)
+            duration_ms = int((time.time() - start_time) * 1000)
+            return AgentResult(
+                success=False,
+                output=f"执行出错: {str(e)}",
+                duration_ms=duration_ms,
+                error_msg=str(e),
+            )
 
     async def arun(self, user_input: str, **kwargs: Any) -> AgentResult:
         """

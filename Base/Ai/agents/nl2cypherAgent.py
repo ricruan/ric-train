@@ -298,61 +298,16 @@ class NL2CypherAgent(ReActAgent):
 
     def run(self, user_input: str, user_id: Optional[str] = None, session_id: Optional[str] = None, **kwargs: Any) -> "AgentResult":
         """
-        覆盖基类 run，增加调用日志记录（含工具调用明细）。
+        覆盖基类 run，传入 user_id/session_id 到 metadata 供 MetricsMiddleware 持久化使用。
+        持久化由 MetricsMiddleware 统一处理，不再手动创建 BaseAgentCallLog。
         """
-        from Base.Ai.base.baseAgent import AgentResult
-        from Base.Models.baseAgentCallLogModel import BaseAgentCallLog
-        from Base.Models.baseAgentToolCallLogModel import BaseAgentToolCallLog
+        # 将 user_id/session_id 传入 metadata，供 MetricsMiddleware 使用
+        if user_id:
+            kwargs.setdefault("user_id", user_id)
+        if session_id:
+            kwargs.setdefault("session_id", session_id)
 
-        start_time = time.time()
-
-        # 创建调用记录
-        input_data = json.dumps({"text": user_input, "schema": kwargs.get("schema")}, ensure_ascii=False)
-        call_log = BaseAgentCallLog(
-            agent_name=self.name,
-            user_id=user_id,
-            session_id=session_id,
-            input_data=input_data,
-            ai_model=self.llm.model_name,
-        )
-        call_log.save()
-
-        try:
-            result = super().run(user_input, **kwargs)
-            output_data = json.dumps({
-                "output": result.output[:500] if result.output else "",
-                "success": result.success,
-            }, ensure_ascii=False)
-            call_log.output_data = output_data
-            call_log.status = "success" if result.success else "failed"
-            call_log.error_msg = result.error_msg
-            call_log.duration_ms = result.duration_ms
-            call_log.iterations = result.iterations
-            call_log.save()
-
-            # 保存工具调用明细
-            if call_log.id and hasattr(self, "_tool_call_logs") and self._tool_call_logs:
-                for i, tc in enumerate(self._tool_call_logs, 1):
-                    tool_log = BaseAgentToolCallLog(
-                        agent_call_id=call_log.id,
-                        tool_name=tc["tool_name"],
-                        tool_input=tc["tool_input"],
-                        tool_output=tc["tool_output"],
-                        status=tc["status"],
-                        error_msg=tc.get("error_msg"),
-                        duration_ms=tc.get("duration_ms", 0),
-                        call_order=tc.get("call_order", i),
-                    )
-                    tool_log.save()
-
-            return result
-
-        except Exception as e:
-            call_log.status = "failed"
-            call_log.error_msg = str(e)
-            call_log.duration_ms = int((time.time() - start_time) * 1000)
-            call_log.save()
-            raise
+        return super().run(user_input, **kwargs)
 
 
 if __name__ == "__main__":
