@@ -1,6 +1,6 @@
 // Wolin/frontend/react/src/utils/audioCompressor.ts
 // @ts-ignore - lamejs has no default export types
-import lamejs from 'lamejs';
+import lamejs from '@breezystack/lamejs';
 
 /**
  * 将 WAV 文件压缩为 MP3

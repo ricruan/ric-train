@@ -155,3 +155,6 @@ def setup_logging():
     logging.info(f"日志系统初始化完成，日志级别设置为: {level_name}")
     logging.info(f"常规日志文件将保存在: {log_file_path}")
     logging.info(f"错误日志文件将保存在: {error_log_file_path}")
+
+    # 屏蔽第三方库的 DEBUG 日志
+    logging.getLogger("python_multipart").setLevel(logging.WARNING)

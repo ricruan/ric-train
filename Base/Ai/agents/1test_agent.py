@@ -11,4 +11,4 @@ agent = NL2CypherAgent(client=Neo4jClient(), middlewares=[LoggingMiddleware(),
 
 
 if __name__ == '__main__':
-    agent.run("张三和李四都是王五的好闺蜜")
+    agent.run("张三投资了黄金和白银")

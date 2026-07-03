@@ -1,5 +1,5 @@
 // Wolin/frontend/react/src/types/lamejs.d.ts
-declare module 'lamejs' {
+declare module '@breezystack/lamejs' {
   interface Mp3Encoder {
     encodeBuffer(left: Int16Array, right?: Int16Array): Uint8Array;
     flush(): Uint8Array;

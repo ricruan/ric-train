@@ -1,9 +1,7 @@
 import { useState, useRef } from 'react';
 import { submitAnalysis } from '@/api/analysis';
 import { useFileUpload } from '@/hooks/useFileUpload';
-import { useUploadLog } from '@/hooks/useUploadLog';
 import FileUploadProgress from '@/components/FileUploadProgress';
-import UploadLogPanel from '@/components/UploadLogPanel';
 
 const IconUpload = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -23,7 +21,6 @@ export default function InterviewAnalysis() {
 
   // 新增：使用 useFileUpload hook
   const { state: uploadState, upload, reset: resetUpload } = useFileUpload();
-  const { logs, addLog, clearLogs } = useUploadLog();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,13 +66,10 @@ export default function InterviewAnalysis() {
 
           // 调用 API
           return submitAnalysis(formData, onProgress);
-        },
-        undefined, // formDataBuilder 使用默认
-        addLog // 传入日志函数
+        }
       );
     } catch {
       setResult({ message: '网络错误，请检查网络连接后重试', type: 'error' });
-      addLog('error', '网络请求失败');
     } finally {
       submittingRef.current = false;
       setLoading(false);
@@ -173,9 +167,6 @@ export default function InterviewAnalysis() {
             {result.message}
           </div>
         )}
-
-        {/* 上传日志面板 */}
-        <UploadLogPanel logs={logs} onClear={clearLogs} />
       </div>
     </div>
   );

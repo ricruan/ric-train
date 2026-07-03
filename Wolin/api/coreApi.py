@@ -27,10 +27,20 @@ async def interview_analysis(
         audio_file: UploadFile = File(...),
         resume_file: Optional[UploadFile] = None
 ):
+    # 记录上传日志
+    audio_size = audio_file.size if hasattr(audio_file, 'size') and audio_file.size else 'unknown'
+    logger.info(f"[上传] 音频文件: {audio_file.filename}, 类型: {audio_file.content_type}, 大小: {audio_size}")
+    if resume_file:
+        resume_size = resume_file.size if hasattr(resume_file, 'size') and resume_file.size else 'unknown'
+        logger.info(f"[上传] 简历文件: {resume_file.filename}, 类型: {resume_file.content_type}, 大小: {resume_size}")
+
     audio_file_path = await save_upload_file_to_temp(audio_file, use_original_filename=True)
+    logger.info(f"[上传] 音频已保存到: {audio_file_path}")
+
     resume_file_path = None
     if resume_file:
         resume_file_path = await save_upload_file_to_temp(resume_file, use_original_filename=True)
+        logger.info(f"[上传] 简历已保存到: {resume_file_path}")
     try:
         def run_analysis():
             try:
