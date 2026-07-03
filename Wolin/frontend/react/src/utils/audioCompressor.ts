@@ -1,4 +1,5 @@
 // Wolin/frontend/react/src/utils/audioCompressor.ts
+// @ts-ignore - lamejs has no default export types
 import lamejs from 'lamejs';
 
 /**
