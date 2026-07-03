@@ -89,7 +89,7 @@ export async function compressWavToMp3(
   }
 
   // 7. 创建 Blob
-  return new Blob(mp3Data, { type: 'audio/mp3' });
+  return new Blob(mp3Data.map(arr => arr.buffer as ArrayBuffer), { type: 'audio/mp3' });
 }
 
 /**

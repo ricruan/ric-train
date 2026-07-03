@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { submitAnalysis } from '@/api/analysis';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import FileUploadProgress from '@/components/FileUploadProgress';
 
 const IconUpload = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -16,6 +18,9 @@ export default function InterviewAnalysis() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const submittingRef = useRef(false);
+
+  // 新增：使用 useFileUpload hook
+  const { state: uploadState, upload, reset: resetUpload } = useFileUpload();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,21 +53,21 @@ export default function InterviewAnalysis() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('receive_email', email);
-    formData.append('user_name', trimmedName);
-    formData.append('company_name', trimmedCompany);
-    formData.append('audio_file', audioFile);
-    formData.append('resume_file', resumeFile);
-
     try {
-      const res = await submitAnalysis(formData);
-      setResult({ message: res.data.msg || '提交成功，分析结果将发送到您的邮箱', type: 'success' });
-      setEmail('');
-      setUserName('');
-      setCompanyName('');
-      setAudioFile(null);
-      setResumeFile(null);
+      // 使用新的 upload 方法
+      await upload(
+        audioFile,
+        async (formData, onProgress) => {
+          // 添加其他字段
+          formData.append('receive_email', email);
+          formData.append('user_name', trimmedName);
+          formData.append('company_name', trimmedCompany);
+          formData.append('resume_file', resumeFile!);
+
+          // 调用 API
+          return submitAnalysis(formData, onProgress);
+        }
+      );
     } catch {
       setResult({ message: '网络错误，请检查网络连接后重试', type: 'error' });
     } finally {
@@ -70,6 +75,24 @@ export default function InterviewAnalysis() {
       setLoading(false);
     }
   };
+
+  // 监听上传状态变化
+  const prevStatusRef = useRef(uploadState.status);
+  if (uploadState.status !== prevStatusRef.current) {
+    prevStatusRef.current = uploadState.status;
+
+    if (uploadState.status === 'success') {
+      setResult({ message: '提交成功，分析结果将发送到您的邮箱', type: 'success' });
+      setEmail('');
+      setUserName('');
+      setCompanyName('');
+      setAudioFile(null);
+      setResumeFile(null);
+      resetUpload();
+    } else if (uploadState.status === 'error') {
+      setResult({ message: uploadState.message, type: 'error' });
+    }
+  }
 
   const fileLabel = (file: File | null, fallback: string) =>
     file ? `已选择: ${file.name}` : fallback;
@@ -109,6 +132,14 @@ export default function InterviewAnalysis() {
                   {fileLabel(audioFile, '点击选择音频文件 (mp3, wav, m4a, caf 等)')}
                 </label>
               </div>
+              {/* 进度条组件 */}
+              {audioFile && (uploadState.status === 'compressing' || uploadState.status === 'uploading' || uploadState.status === 'success' || uploadState.status === 'error') && (
+                <FileUploadProgress
+                  fileName={audioFile.name}
+                  fileSize={audioFile.size}
+                  state={uploadState}
+                />
+              )}
             </div>
 
             <div className="form-group animate-in">
