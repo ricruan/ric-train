@@ -1,5 +1,4 @@
 // Wolin/frontend/react/src/components/FileUploadProgress.tsx
-import { formatFileSize } from '@/utils/audioCompressor';
 import type { UploadState } from '@/hooks/useFileUpload';
 
 interface FileUploadProgressProps {
@@ -8,11 +7,15 @@ interface FileUploadProgressProps {
   state: UploadState;
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
 export default function FileUploadProgress({ fileName, fileSize, state }: FileUploadProgressProps) {
   const getProgressText = () => {
     switch (state.status) {
-      case 'compressing':
-        return `压缩中... ${state.progress}%`;
       case 'uploading':
         return `上传中... ${state.progress}%`;
       case 'success':
@@ -25,7 +28,7 @@ export default function FileUploadProgress({ fileName, fileSize, state }: FileUp
   };
 
   const getProgressPercent = () => {
-    if (state.status === 'compressing' || state.status === 'uploading') {
+    if (state.status === 'uploading') {
       return state.progress;
     }
     if (state.status === 'success') return 100;
@@ -34,12 +37,10 @@ export default function FileUploadProgress({ fileName, fileSize, state }: FileUp
 
   const getProgressColor = () => {
     switch (state.status) {
-      case 'compressing':
-        return '#1890ff'; // 蓝色
       case 'uploading':
-        return '#52c41a'; // 绿色
+        return '#1890ff'; // 蓝色
       case 'success':
-        return '#52c41a';
+        return '#52c41a'; // 绿色
       case 'error':
         return '#ff4d4f'; // 红色
       default:
@@ -47,7 +48,7 @@ export default function FileUploadProgress({ fileName, fileSize, state }: FileUp
     }
   };
 
-  const isActive = state.status === 'compressing' || state.status === 'uploading';
+  const isActive = state.status === 'uploading';
   const isError = state.status === 'error';
 
   return (

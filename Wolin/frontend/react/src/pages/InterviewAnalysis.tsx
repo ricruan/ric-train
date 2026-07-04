@@ -133,7 +133,7 @@ export default function InterviewAnalysis() {
                 </label>
               </div>
               {/* 进度条组件 */}
-              {audioFile && (uploadState.status === 'compressing' || uploadState.status === 'uploading' || uploadState.status === 'success' || uploadState.status === 'error') && (
+              {audioFile && (uploadState.status === 'uploading' || uploadState.status === 'success' || uploadState.status === 'error') && (
                 <FileUploadProgress
                   fileName={audioFile.name}
                   fileSize={audioFile.size}
