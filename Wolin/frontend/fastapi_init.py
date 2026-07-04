@@ -17,7 +17,12 @@ def frontend_init(app : FastAPI):
     @app.get("/", response_class=RedirectResponse)
     async def root_redirect(request: Request):
         """根路径重定向到前端面试分析页面"""
-        return RedirectResponse(url="http://localhost:3001/")
+        # 动态获取当前请求的 host，替换端口为 3001
+        host = request.headers.get("host", "localhost")
+        # 如果是 IP:端口 格式，替换端口
+        if ":" in host:
+            host = host.split(":")[0]
+        return RedirectResponse(url=f"http://{host}:3001/")
 
     @app.get("/interview-analysis", response_class=HTMLResponse)
     async def interview_upload_page(request: Request):
