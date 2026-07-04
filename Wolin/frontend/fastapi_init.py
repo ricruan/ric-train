@@ -1,7 +1,7 @@
 # 挂载静态文件
 from pathlib import Path
 
-from starlette.responses import HTMLResponse
+from starlette.responses import HTMLResponse, RedirectResponse
 from starlette.templating import Jinja2Templates
 from fastapi import Request
 
@@ -14,7 +14,12 @@ def frontend_init(app : FastAPI):
     # 模板配置
     templates = Jinja2Templates(directory=BASE_DIR)
 
-    @app.get("/", response_class=HTMLResponse)
+    @app.get("/", response_class=RedirectResponse)
+    async def root_redirect(request: Request):
+        """根路径重定向到前端面试分析页面"""
+        return RedirectResponse(url="http://localhost:3001/")
+
+    @app.get("/interview-analysis", response_class=HTMLResponse)
     async def interview_upload_page(request: Request):
         """面试分析上传页面"""
         return templates.TemplateResponse("interviewAnalysis.html", {"request": request})
