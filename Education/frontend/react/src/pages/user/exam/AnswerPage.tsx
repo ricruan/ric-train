@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Button, Radio, Input, Space, Modal, Typography, Spin, message, Progress } from 'antd'
+import { Card, Button, Radio, Input, Space, Modal, Typography, Spin, message, Progress, Tag } from 'antd'
 import { ClockCircleOutlined, CheckCircleOutlined } from '@ant-design/icons'
 import { paperApi } from '@/api/paper'
 import { examApi } from '@/api/exam'
@@ -69,7 +69,7 @@ export default function AnswerPage() {
     }
   }, [paperId, user])
 
-  const handleAutoSubmit = async (timeSpent: number, currentExamId: number) => {
+  const handleAutoSubmit = async (_timeSpent: number, currentExamId: number) => {
     if (timerRef.current) clearInterval(timerRef.current)
     try {
       await examApi.submit(currentExamId, answers)

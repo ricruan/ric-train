@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Button, Typography, Spin, Descriptions, Tag, Divider, message } from 'antd'
-import { CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { Card, Button, Typography, Spin, Descriptions, Tag, Space, message } from 'antd'
 import { examApi } from '@/api/exam'
 import type { ExamResultDetail } from '@/types'
 

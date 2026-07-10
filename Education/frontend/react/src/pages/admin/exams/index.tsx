@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Card, Input, Button, Table, Tag, Space, message, Descriptions, Collapse } from 'antd'
+import { Card, Input, Button, Table, Tag, Space, message, Descriptions } from 'antd'
 import { SearchOutlined } from '@ant-design/icons'
 import { examApi } from '@/api/exam'
 import type { ExamRecord } from '@/types'
@@ -16,7 +16,6 @@ export default function ExamsPage() {
   const [records, setRecords] = useState<ExamRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [selectedExam, setSelectedExam] = useState<ExamRecord | null>(null)
-  const [detailLoading, setDetailLoading] = useState(false)
 
   const handleSearch = async () => {
     if (!userId.trim()) return
@@ -32,14 +31,11 @@ export default function ExamsPage() {
   }
 
   const handleViewDetail = async (examId: number) => {
-    setDetailLoading(true)
     try {
       const res = await examApi.getResultDetail(examId)
       setSelectedExam(res.data as unknown as ExamRecord)
     } catch (error) {
       message.error(error instanceof Error ? error.message : '获取详情失败')
-    } finally {
-      setDetailLoading(false)
     }
   }
 

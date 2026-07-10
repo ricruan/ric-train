@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { createBrowserRouter, RouterProvider, Navigate, useLocation } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Navigate, useLocation, RouteObject } from 'react-router-dom'
 import { useAuthStore } from '@/store'
 import { routes } from './routes'
 import { Spin } from 'antd'
@@ -33,21 +33,21 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
 }
 
 /** 包装路由，添加守卫 */
-function wrapRoutesWithGuards(routeList: typeof routes): typeof routes {
+function wrapRoutesWithGuards(routeList: RouteObject[]): RouteObject[] {
   return routeList.map((route) => {
     if (route.path === '/admin' || route.path?.startsWith('/admin')) {
       return {
         ...route,
         element: <RequireAdmin>{route.element}</RequireAdmin>,
-        children: route.children ? wrapRoutesWithGuards(route.children) : undefined,
-      }
+        children: route.children ? wrapRoutesWithGuards(route.children as RouteObject[]) : undefined,
+      } as RouteObject
     }
     if (route.path === '/user' || route.path?.startsWith('/user')) {
       return {
         ...route,
         element: <RequireAuth>{route.element}</RequireAuth>,
-        children: route.children ? wrapRoutesWithGuards(route.children) : undefined,
-      }
+        children: route.children ? wrapRoutesWithGuards(route.children as RouteObject[]) : undefined,
+      } as RouteObject
     }
     return route
   })

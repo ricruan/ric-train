@@ -47,7 +47,7 @@ export default function AdminLayout() {
   const breadcrumbItems = [
     { title: '首页' },
     ...pathSnippets.map((snippet) => ({
-      title: menuItems?.find((item) => (item as { key: string }).key === `/${pathSnippets.slice(0, pathSnippets.indexOf(snippet) + 1).join('/')}`)?.label || snippet,
+      title: (menuItems?.find((item) => (item as any)?.key === `/${pathSnippets.slice(0, pathSnippets.indexOf(snippet) + 1).join('/')}`) as any)?.label || snippet,
     })),
   ]
 

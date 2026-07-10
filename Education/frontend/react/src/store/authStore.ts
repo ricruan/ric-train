@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { authApi } from '@/api/auth'
-import { SOURCE_MODULE } from '@/types'
 import type { UserInfo } from '@/types'
 
 const TOKEN_KEY = 'edu_access_token'

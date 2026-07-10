@@ -44,18 +44,30 @@ class UserModel(BaseModuleDBModel):
 
     @classmethod
     def find_by_username(cls, username: str):
+        cls._ensure_table_exists()
+        db = cls.get_db_connection()
+        if db is None:
+            return None
         sql = f"SELECT * FROM {cls.table_alias} WHERE username = %s AND deleted_at IS NULL"
-        results = cls.get_db_connection().execute(sql, (username,))
+        results = db.execute(sql, (username,))
         return cls(**results[0]) if results else None
 
     @classmethod
     def find_by_email(cls, email: str):
+        cls._ensure_table_exists()
+        db = cls.get_db_connection()
+        if db is None:
+            return None
         sql = f"SELECT * FROM {cls.table_alias} WHERE email = %s AND deleted_at IS NULL"
-        results = cls.get_db_connection().execute(sql, (email,))
+        results = db.execute(sql, (email,))
         return cls(**results[0]) if results else None
 
     @classmethod
     def find_by_module(cls, source_module: str, limit: int = None, offset: int = 0):
+        cls._ensure_table_exists()
+        db = cls.get_db_connection()
+        if db is None:
+            return []
         sql = f"SELECT * FROM {cls.table_alias} WHERE source_module = %s AND deleted_at IS NULL"
         params: list = [source_module]
         sql += " ORDER BY id ASC"
@@ -65,5 +77,16 @@ class UserModel(BaseModuleDBModel):
         if offset:
             sql += f" OFFSET %s"
             params.append(offset)
-        results = cls.get_db_connection().execute(sql, tuple(params))
+        results = db.execute(sql, tuple(params))
         return [cls(**row) for row in results]
+
+    @classmethod
+    def get_by_id(cls, id_val):
+        """重写 get_by_id，过滤已软删除的用户"""
+        cls._ensure_table_exists()
+        db = cls.get_db_connection()
+        if db is None:
+            return None
+        sql = f"SELECT * FROM {cls.table_alias} WHERE id = %s AND deleted_at IS NULL"
+        results = db.execute(sql, (id_val,))
+        return cls(**results[0]) if results else None

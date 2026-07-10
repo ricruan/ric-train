@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Superpowers - 用户管理系统</title>
+  <style>
+    :root {
+      --bg: #0a0e1a; --card: #131829; --card2: #1a2035; --border: #2a3050;
+      --accent: #7c3aed; --accent-hover: #8b5cf6; --accent-glow: rgba(124,58,237,.3);
+      --text: #e2e8f0; --text-muted: #94a3b8;
+      --success: #10b981; --error: #ef4444; --warning: #f59e0b; --info: #3b82f6;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .header { background: linear-gradient(135deg, var(--card), var(--card2)); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 20px; background: linear-gradient(135deg, var(--accent), #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+    .user-badge { display: none; align-items: center; gap: 6px; background: var(--card2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; font-size: 13px; }
+    .user-badge.show { display: flex; }
+    .role-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+    .role-super_admin { background: rgba(239,68,68,.2); color: #f87171; }
+    .role-admin { background: rgba(245,158,11,.2); color: #fbbf24; }
+    .role-moderator { background: rgba(59,130,246,.2); color: #60a5fa; }
+    .role-user { background: rgba(16,185,129,.2); color: #34d399; }
+    .role-guest { background: rgba(148,163,184,.2); color: #94a3b8; }
+    .role-custom { background: rgba(124,58,237,.2); color: #a78bfa; }
+    .api-input { background: var(--card2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; color: var(--text); font-size: 12px; width: 200px; outline: none; }
+    .api-input:focus { border-color: var(--accent); }
+    .main { display: flex; min-height: calc(100vh - 56px); }
+    .sidebar { width: 200px; background: var(--card); border-right: 1px solid var(--border); padding: 12px 0; display: none; }
+    .sidebar.show { display: block; }
+    .sidebar-item { padding: 10px 18px; cursor: pointer; font-size: 13px; color: var(--text-muted); transition: .2s; border-left: 3px solid transparent; }
+    .sidebar-item:hover { color: var(--text); background: var(--card2); }
+    .sidebar-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(124,58,237,.06); }
+    .content { flex: 1; padding: 24px; max-width: 920px; margin: 0 auto; }
+    .auth-container { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - 56px); padding: 24px; }
+    .auth-card { width: 400px; max-width: 95vw; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+    .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; font-weight: 600; font-size: 14px; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: .2s; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .form { display: none; } .form.active { display: block; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+    .field input, .field select, .field textarea { width: 100%; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; outline: none; transition: .2s; }
+    .field input:focus, .field select:focus { border-color: var(--accent); }
+    .btn { padding: 10px 18px; border: none; border-radius: 8px; background: var(--accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; transition: .2s; }
+    .btn:hover { background: var(--accent-hover); box-shadow: 0 0 16px var(--accent-glow); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-full { width: 100%; }
+    .btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-outline:hover { border-color: var(--accent); color: var(--accent); box-shadow: none; }
+    .msg { margin-top: 10px; padding: 9px 12px; border-radius: 8px; font-size: 12px; display: none; }
+    .msg.show { display: block; }
+    .msg.success { background: rgba(16,185,129,.12); color: var(--success); border: 1px solid rgba(16,185,129,.3); }
+    .msg.error { background: rgba(239,68,68,.12); color: var(--error); border: 1px solid rgba(239,68,68,.3); }
+    .panel { display: none; } .panel.active { display: block; }
+    .panel h2 { font-size: 17px; margin-bottom: 14px; }
+    .panel-desc { color: var(--text-muted); font-size: 12px; margin-bottom: 16px; }
+    .token-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; }
+    .token-box label { font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 2px; }
+    .token-box code { font-size: 10px; word-break: break-all; color: var(--accent); display: block; max-height: 50px; overflow-y: auto; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: var(--card2); color: var(--text-muted); font-weight: 600; font-size: 10px; text-transform: uppercase; }
+    .actions-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; align-items: end; }
+    .perm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; margin-top: 10px; }
+    .perm-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: .2s; }
+    .perm-card.selected { border-color: var(--accent); background: rgba(124,58,237,.08); }
+    .perm-card .perm-name { font-size: 12px; font-weight: 500; }
+    .perm-card .perm-key { font-size: 9px; color: var(--text-muted); }
+    .role-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin: 2px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .checkbox-group { display: flex; flex-wrap: wrap; gap: 6px; }
+    .checkbox-group label { display: flex; align-items: center; gap: 4px; font-size: 12px; cursor: pointer; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; }
+    .checkbox-group label:hover { border-color: var(--accent); }
+    .checkbox-group input:checked + span { color: var(--accent); }
+    @media (max-width: 768px) { .sidebar { width: 160px; } .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="header">
+  <h1>SUPERPOWERS</h1>
+  <div class="header-right">
+    <input class="api-input" id="apiBase" value="http://localhost:8010" placeholder="API">
+    <div class="user-badge" id="userBadge">
+      <span id="badgeUser"></span>
+      <span id="badgeRoles"></span>
+    </div>
+    <button class="btn btn-sm btn-outline" id="logoutBtn" style="display:none" onclick="logout()">退出</button>
+  </div>
+</div>
+<div class="main">
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-item active" data-panel="dashboard">📊 仪表盘</div>
+    <div class="sidebar-item" data-panel="profile">👤 个人信息</div>
+    <div class="sidebar-item" data-panel="users">👥 用户管理</div>
+    <div class="sidebar-item" data-panel="roles">🛡️ 角色管理</div>
+    <div class="sidebar-item" data-panel="permissions">⚡ 权限一览</div>
+    <div class="sidebar-item" data-panel="tokens">🔑 Tokens</div>
+  </div>
+
+  <!-- Auth Forms -->
+  <div class="auth-container" id="authContainer">
+    <div class="auth-card">
+      <div class="card">
+        <div class="tabs">
+          <div class="tab active" data-tab="login">登录</div>
+          <div class="tab" data-tab="register">注册</div>
+        </div>
+        <form class="form active" id="loginForm" autocomplete="off">
+          <div class="field"><label>用户名</label><input type="text" id="loginUsername" required></div>
+          <div class="field"><label>密码</label><input type="password" id="loginPassword" required></div>
+          <button class="btn btn-full" type="submit">登录</button>
+          <div class="msg" id="loginMsg"></div>
+        </form>
+        <form class="form" id="registerForm" autocomplete="off">
+          <div class="field"><label>用户名 *</label><input type="text" id="regUsername" required></div>
+          <div class="field"><label>密码 *</label><input type="password" id="regPassword" required placeholder="至少6位"></div>
+          <div class="grid-2">
+            <div class="field"><label>邮箱</label><input type="email" id="regEmail"></div>
+            <div class="field"><label>手机</label><input type="tel" id="regPhone"></div>
+          </div>
+          <div class="field">
+            <label>来源模块</label>
+            <select id="regSource"><option value="default">Default</option><option value="wolin">Wolin</option><option value="education">Education</option></select>
+          </div>
+          <button class="btn btn-full" type="submit">注册</button>
+          <div class="msg" id="regMsg"></div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content" id="mainContent" style="display:none">
+
+    <!-- Dashboard -->
+    <div class="panel active" id="panel-dashboard">
+      <h2>📊 仪表盘</h2>
+      <div class="card" id="dashboardCard">
+        <div id="dashInfo" style="font-size:13px;line-height:2">加载中...</div>
+        <h3 style="margin-top:14px;font-size:13px;color:var(--text-muted)">我的角色</h3>
+        <div id="dashRoles" style="margin:8px 0"></div>
+        <h3 style="margin-top:14px;font-size:13px;color:var(--text-muted)">我的权限</h3>
+        <div class="perm-grid" id="dashPerms"></div>
+      </div>
+    </div>
+
+    <!-- Profile -->
+    <div class="panel" id="panel-profile">
+      <h2>👤 个人信息</h2>
+      <div class="card" style="margin-bottom:14px">
+        <h3 style="font-size:13px;margin-bottom:10px">修改资料</h3>
+        <div class="grid-2">
+          <div class="field"><label>邮箱</label><input type="email" id="profEmail"></div>
+          <div class="field"><label>手机</label><input type="tel" id="profPhone"></div>
+        </div>
+        <button class="btn btn-sm" onclick="updateProfile()">更新资料</button>
+        <div class="msg" id="profMsg"></div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:13px;margin-bottom:10px">修改密码</h3>
+        <div class="grid-2">
+          <div class="field"><label>原密码</label><input type="password" id="oldPwd"></div>
+          <div class="field"><label>新密码</label><input type="password" id="newPwd"></div>
+        </div>
+        <button class="btn btn-sm" onclick="changePassword()">修改密码</button>
+        <div class="msg" id="pwdMsg"></div>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="panel" id="panel-users">
+      <h2>👥 用户管理</h2>
+      <div class="actions-row">
+        <input class="api-input" id="searchKw" placeholder="搜索用户名/邮箱..." style="width:180px">
+        <select class="api-input" id="filterStatus" style="width:110px" onchange="loadUsers()">
+          <option value="">全部状态</option><option value="active">活跃</option><option value="inactive">未激活</option><option value="banned">封禁</option>
+        </select>
+        <button class="btn btn-sm btn-outline" onclick="loadUsers()">搜索</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>ID</th><th>用户名</th><th>角色</th><th>状态</th><th>操作</th></tr></thead>
+          <tbody id="usersTbody"><tr><td colspan="5" style="text-align:center;color:var(--text-muted)">无数据</td></tr></tbody>
+        </table>
+      </div>
+      <div class="msg" id="usersMsg"></div>
+    </div>
+
+    <!-- Roles -->
+    <div class="panel" id="panel-roles">
+      <h2>🛡️ 角色管理</h2>
+      <div class="card" style="margin-bottom:14px">
+        <h3 style="font-size:13px;margin-bottom:10px">角色列表</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>角色</th><th>显示名</th><th>权限</th><th>类型</th></tr></thead>
+            <tbody id="rolesTbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:13px;margin-bottom:10px">创建自定义角色</h3>
+        <div class="grid-2">
+          <div class="field"><label>角色标识 *</label><input type="text" id="newRoleName" placeholder="如: editor"></div>
+          <div class="field"><label>显示名称 *</label><input type="text" id="newRoleDisplayName" placeholder="如: 编辑"></div>
+        </div>
+        <div class="field"><label>描述</label><input type="text" id="newRoleDesc" placeholder="可选"></div>
+        <div class="field"><label>权限</label><div class="checkbox-group" id="newRolePerms"></div></div>
+        <button class="btn btn-sm" onclick="createRole()">创建角色</button>
+        <div class="msg" id="roleMsg"></div>
+      </div>
+    </div>
+
+    <!-- Permissions -->
+    <div class="panel" id="panel-permissions">
+      <h2>⚡ 权限一览</h2>
+      <div class="card">
+        <div class="perm-grid" id="allPerms"></div>
+      </div>
+    </div>
+
+    <!-- Tokens -->
+    <div class="panel" id="panel-tokens">
+      <h2>🔑 Tokens</h2>
+      <div class="card">
+        <div class="token-box"><label>Access Token</label><code id="dispAccess"></code></div>
+        <div class="token-box"><label>Refresh Token</label><code id="dispRefresh"></code></div>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn btn-sm btn-outline" onclick="refreshToken()">刷新 Access Token</button>
+          <button class="btn btn-sm btn-outline" onclick="testToken()">验证 Token</button>
+        </div>
+        <div class="msg" id="tokenMsg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let state = { accessToken: null, refreshToken: null, user: null };
+const $ = id => document.getElementById(id);
+const getBase = () => $('apiBase').value.replace(/\/$/, '');
+function showMsg(id, type, text) { const el = $(id); el.textContent = text; el.className = `msg show ${type}`; }
+async function api(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (state.accessToken) headers['Authorization'] = `Bearer ${state.accessToken}`;
+  const r = await fetch(`${getBase()}${path}`, { ...opts, headers });
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.detail || d.msg || `HTTP ${r.status}`);
+  return d;
+}
+function roleTag(name) {
+  const cls = ['super_admin','admin','moderator','user','guest'].includes(name) ? `role-${name}` : 'role-custom';
+  return `<span class="role-tag ${cls}">${name}</span>`;
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.form').forEach(x => x.classList.remove('active'));
+  t.classList.add('active'); $(t.dataset.tab + 'Form').classList.add('active');
+}));
+
+// Register
+$('registerForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  try {
+    await api('/api/auth/register', { method: 'POST', body: JSON.stringify({
+      username: $('regUsername').value, password: $('regPassword').value,
+      email: $('regEmail').value || null, phone: $('regPhone').value || null,
+      source_module: $('regSource').value,
+    })});
+    showMsg('regMsg', 'success', '注册成功！');
+    setTimeout(() => document.querySelector('[data-tab="login"]').click(), 800);
+  } catch (err) { showMsg('regMsg', 'error', err.message); }
+});
+
+// Login
+$('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  try {
+    const res = await api('/api/auth/login', { method: 'POST', body: JSON.stringify({
+      username: $('loginUsername').value, password: $('loginPassword').value,
+    })});
+    const d = res.data;
+    state.accessToken = d.access_token; state.refreshToken = d.refresh_token; state.user = d;
+    showLoggedIn();
+  } catch (err) { showMsg('loginMsg', 'error', err.message); }
+});
+
+function showLoggedIn() {
+  $('authContainer').style.display = 'none';
+  $('mainContent').style.display = 'block';
+  $('sidebar').classList.add('show');
+  $('logoutBtn').style.display = 'block';
+  $('userBadge').classList.add('show');
+  $('badgeUser').textContent = state.user.username;
+  $('badgeRoles').innerHTML = (state.user.roles || []).map(r => roleTag(r)).join('');
+  $('dispAccess').textContent = state.accessToken;
+  $('dispRefresh').textContent = state.refreshToken;
+  loadDashboard(); loadRoles(); loadAllPerms(); loadNewRolePerms();
+}
+function logout() {
+  state = { accessToken: null, refreshToken: null, user: null };
+  $('authContainer').style.display = 'flex'; $('mainContent').style.display = 'none';
+  $('sidebar').classList.remove('show'); $('logoutBtn').style.display = 'none'; $('userBadge').classList.remove('show');
+}
+
+// Sidebar
+document.querySelectorAll('.sidebar-item').forEach(i => i.addEventListener('click', () => {
+  document.querySelectorAll('.sidebar-item').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+  i.classList.add('active'); $('panel-' + i.dataset.panel).classList.add('active');
+  if (i.dataset.panel === 'users') loadUsers();
+  if (i.dataset.panel === 'dashboard') loadDashboard();
+}));
+
+// Dashboard
+async function loadDashboard() {
+  try {
+    const u = (await api('/api/auth/me')).data;
+    $('dashInfo').innerHTML = `
+      <div><b>用户名:</b> ${u.username}</div>
+      <div><b>邮箱:</b> ${u.email || '-'}</div>
+      <div><b>手机:</b> ${u.phone || '-'}</div>
+      <div><b>状态:</b> ${u.status}</div>
+      <div><b>管理员:</b> ${u.is_admin ? '是' : '否'}</div>
+      <div><b>上次登录:</b> ${u.last_login_at || '-'}</div>`;
+    $('dashRoles').innerHTML = (u.roles || []).map(r => `<span class="role-chip ${['super_admin','admin','moderator','user','guest'].includes(r) ? 'role-'+r : 'role-custom'}">${r}</span>`).join('') || '<span style="color:var(--text-muted)">无角色</span>';
+    $('dashPerms').innerHTML = (u.permissions || []).map(p => `<div class="perm-card selected"><span>⚡</span><div class="perm-name">${p}</div></div>`).join('');
+  } catch (e) { $('dashInfo').innerHTML = `<span style="color:var(--error)">${e.message}</span>`; }
+}
+
+// Profile
+async function updateProfile() {
+  try { await api('/api/auth/me', { method: 'PUT', body: JSON.stringify({ email: $('profEmail').value || null, phone: $('profPhone').value || null })}); showMsg('profMsg', 'success', '更新成功'); } catch (e) { showMsg('profMsg', 'error', e.message); }
+}
+async function changePassword() {
+  try { await api('/api/auth/change-password', { method: 'POST', body: JSON.stringify({ old_password: $('oldPwd').value, new_password: $('newPwd').value })}); showMsg('pwdMsg', 'success', '密码已修改'); $('oldPwd').value = ''; $('newPwd').value = ''; } catch (e) { showMsg('pwdMsg', 'error', e.message); }
+}
+
+// Users
+async function loadUsers() {
+  try {
+    const res = await api(`/api/auth/users?keyword=${encodeURIComponent($('searchKw').value)}&status=${$('filterStatus').value}&limit=50`);
+    const tbody = $('usersTbody');
+    if (!res.data.users.length) { tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">无数据</td></tr>'; return; }
+    tbody.innerHTML = res.data.users.map(u => `<tr>
+      <td>${u.id}</td><td>${u.username}</td>
+      <td>${(u.roles || []).map(r => roleTag(r)).join(' ') || '-'}</td>
+      <td>${u.status}</td>
+      <td>
+        <button class="btn btn-sm btn-outline" onclick="toggleStatus(${u.id},'${u.status === 'active' ? 'banned' : 'active'}')">${u.status === 'active' ? '封禁' : '激活'}</button>
+        <button class="btn btn-sm btn-outline" onclick="openRoleModal(${u.id},'${u.username}',${JSON.stringify(u.roles || [])})">角色</button>
+      </td></tr>`).join('');
+  } catch (e) { showMsg('usersMsg', 'error', e.message); }
+}
+async function toggleStatus(id, s) {
+  try { await api('/api/auth/users/status', { method: 'PUT', body: JSON.stringify({ user_id: id, status: s })}); loadUsers(); } catch (e) { showMsg('usersMsg', 'error', e.message); }
+}
+
+// Role modal (simple prompt)
+let allRoles = [];
+async function openRoleModal(userId, username, currentRoles) {
+  const roleNames = allRoles.map(r => r.name);
+  const input = prompt(`为用户 ${username} 设置角色\n可用角色: ${roleNames.join(', ')}\n\n输入角色名 (逗号分隔):`, currentRoles.join(', '));
+  if (input === null) return;
+  const roles = input.split(',').map(s => s.trim()).filter(Boolean);
+  try { await api('/api/auth/roles/set', { method: 'POST', body: JSON.stringify({ target_user_id: userId, role_names: roles })}); loadUsers(); } catch (e) { alert(e.message); }
+}
+
+// Roles
+async function loadRoles() {
+  try {
+    const res = await api('/api/auth/roles');
+    allRoles = res.data.roles || [];
+    $('rolesTbody').innerHTML = allRoles.map(r => `<tr>
+      <td>${roleTag(r.name)} ${r.name}</td>
+      <td>${r.display_name}</td>
+      <td style="font-size:11px">${(r.permissions || []).join(', ')}</td>
+      <td>${r.is_builtin ? '内置' : '自定义'}</td>
+    </tr>`).join('');
+  } catch (e) { /* not admin */ }
+}
+
+// Permissions
+async function loadAllPerms() {
+  try {
+    const res = await api('/api/auth/permissions');
+    $('allPerms').innerHTML = (res.data.permissions || []).map(p => `<div class="perm-card"><span>⚡</span><div><div class="perm-name">${p.label}</div><div class="perm-key">${p.key} (${p.group})</div></div></div>`).join('');
+  } catch (e) {}
+}
+
+// New role perms checkboxes
+function loadNewRolePerms() {
+  const perms = [
+    { key: 'user:manage', label: '用户管理' }, { key: 'user:read', label: '查看用户' },
+    { key: 'role:manage', label: '角色管理' }, { key: 'content:manage', label: '内容管理' },
+    { key: 'content:read', label: '内容查看' }, { key: 'system:config', label: '系统配置' },
+    { key: 'module:manage', label: '模块管理' }, { key: 'data:export', label: '数据导出' },
+  ];
+  $('newRolePerms').innerHTML = perms.map(p => `<label><input type="checkbox" value="${p.key}"><span>${p.label}</span></label>`).join('');
+}
+
+async function createRole() {
+  const name = $('newRoleName').value.trim();
+  const displayName = $('newRoleDisplayName').value.trim();
+  if (!name || !displayName) return showMsg('roleMsg', 'error', '请填写角色标识和显示名称');
+  const perms = [...$('newRolePerms').querySelectorAll('input:checked')].map(i => i.value);
+  if (!perms.length) return showMsg('roleMsg', 'error', '请至少选择一个权限');
+  try {
+    await api('/api/auth/roles', { method: 'POST', body: JSON.stringify({ name, display_name: displayName, permissions: perms, description: $('newRoleDesc').value })});
+    showMsg('roleMsg', 'success', `角色 "${displayName}" 创建成功`);
+    $('newRoleName').value = ''; $('newRoleDisplayName').value = ''; $('newRoleDesc').value = '';
+    $('newRolePerms').querySelectorAll('input').forEach(i => i.checked = false);
+    loadRoles();
+  } catch (e) { showMsg('roleMsg', 'error', e.message); }
+}
+
+// Tokens
+async function refreshToken() {
+  try { const r = await api('/api/auth/refresh', { method: 'POST', body: JSON.stringify({ refresh_token: state.refreshToken })}); state.accessToken = r.data.access_token; $('dispAccess').textContent = state.accessToken; showMsg('tokenMsg', 'success', '已刷新'); } catch (e) { showMsg('tokenMsg', 'error', e.message); }
+}
+async function testToken() {
+  try { const r = await api('/api/auth/me'); showMsg('tokenMsg', 'success', `有效! 用户: ${r.data.username}, 角色: ${(r.data.roles||[]).join(', ')}`); } catch (e) { showMsg('tokenMsg', 'error', e.message); }
+}
+</script>
+</body>
+</html>

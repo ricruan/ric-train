@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Table, Tag, Space, Modal, Select, Button, message, Popconfirm, Card, Input, Tabs } from 'antd'
+import { Table, Tag, Space, Modal, Select, Button, message, Popconfirm, Card, Input } from 'antd'
 import { SearchOutlined } from '@ant-design/icons'
 import { authApi } from '@/api/auth'
 import { SOURCE_MODULE } from '@/types'
-import type { AdminUserInfo, RoleInfo, PermissionOption } from '@/types'
+import type { AdminUserInfo, RoleInfo } from '@/types'
 import type { ColumnsType, TablePaginationConfig } from 'antd/es/table'
 
 export default function UsersPage() {
@@ -15,7 +15,6 @@ export default function UsersPage() {
   const [limit] = useState(20)
 
   const [roles, setRoles] = useState<RoleInfo[]>([])
-  const [permissions, setPermissions] = useState<PermissionOption[]>([])
 
   // 角色管理弹窗
   const [roleModalOpen, setRoleModalOpen] = useState(false)
@@ -44,14 +43,7 @@ export default function UsersPage() {
     } catch { /* ignore */ }
   }
 
-  const fetchPermissions = async () => {
-    try {
-      const res = await authApi.listPermissions()
-      setPermissions(res.data.permissions)
-    } catch { /* ignore */ }
-  }
-
-  useEffect(() => { fetchRoles(); fetchPermissions() }, [])
+  useEffect(() => { fetchRoles() }, [])
 
   const handleToggleStatus = async (userId: number, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active'
@@ -129,13 +121,6 @@ export default function UsersPage() {
   const handleTableChange = (pagination: TablePaginationConfig) => {
     setOffset(((pagination.current || 1) - 1) * limit)
   }
-
-  // 按 group 分组权限
-  const permissionsByGroup = permissions.reduce<Record<string, PermissionOption[]>>((acc, p) => {
-    if (!acc[p.group]) acc[p.group] = []
-    acc[p.group].push(p)
-    return acc
-  }, {})
 
   return (
     <Card title="用户管理">

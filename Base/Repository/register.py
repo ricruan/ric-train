@@ -46,15 +46,3 @@ def register_base_module_connection():
         logger.info(f"基础模块数据库连接注册成功 - host: {settings.mysql.host}, port: {settings.mysql.port}, database: {settings.base_module.db_name}, user: {settings.mysql.user}")
     except Exception as e:
         logger.warning(f"注册基础模块数据库连接失败，相关功能将无法持久化：{str(e)}")
-
-
-def init_base_module_tables():
-    """初始化基础模块数据表（用户表、Token 表）"""
-    try:
-        from Base.Models.userModel import UserModel
-        from Base.Models.userTokenModel import UserTokenModel
-        UserModel.create_table()
-        UserTokenModel.create_table()
-        logger.info("基础模块数据表初始化完成")
-    except Exception as e:
-        logger.warning(f"基础模块数据表初始化失败：{str(e)}")

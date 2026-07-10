@@ -118,12 +118,15 @@ def setup_logging():
     root_logger.addHandler(console_handler)
 
     # 添加按天轮转的文件处理器
-    log_file_path = log_dir / "app.log"
+    # 使用 PID 区分进程，避免多实例同时运行时文件锁冲突 (Windows WinError 32)
+    import os
+    pid = os.getpid()
+    log_file_path = log_dir / f"app-{pid}.log"
     file_handler = TimedRotatingFileHandler(
         filename=log_file_path,
         when='midnight',  # 每天午夜轮转
         interval=1,  # 每1天轮转一次
-        backupCount=30,  # 保留30天的日志
+        backupCount=7,  # 保留7天（多进程会产生多个文件，减少保留天数）
         encoding='utf-8',
         atTime=None  # 在午夜时分轮转
     )
@@ -133,12 +136,12 @@ def setup_logging():
     root_logger.addHandler(file_handler)
 
     # 添加专门用于ERROR级别日志的文件处理器
-    error_log_file_path = log_dir / "app.error.log"
+    error_log_file_path = log_dir / f"app-{pid}.error.log"
     error_file_handler = TimedRotatingFileHandler(
         filename=error_log_file_path,
         when='midnight',  # 每天午夜轮转
         interval=1,  # 每1天轮转一次
-        backupCount=30,  # 保留30天的日志
+        backupCount=7,  # 保留7天
         encoding='utf-8',
         atTime=None  # 在午夜时分轮转
     )
@@ -152,9 +155,9 @@ def setup_logging():
     # 获取日志级别的名称
     level_name = logging.getLevelName(log_level)
 
-    logging.info(f"日志系统初始化完成，日志级别设置为: {level_name}")
-    logging.info(f"常规日志文件将保存在: {log_file_path}")
-    logging.info(f"错误日志文件将保存在: {error_log_file_path}")
+    logging.info(f"日志系统初始化完成，日志级别: {level_name}, PID: {pid}")
+    logging.info(f"常规日志: {log_file_path}")
+    logging.info(f"错误日志: {error_log_file_path}")
 
     # 屏蔽第三方库的 DEBUG 日志
     logging.getLogger("python_multipart").setLevel(logging.WARNING)
