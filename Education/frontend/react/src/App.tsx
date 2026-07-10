@@ -1,5 +1,7 @@
+import AppRouter from '@/router'
+
 function App() {
-  return <div>Education Frontend - Loading...</div>
+  return <AppRouter />
 }
 
 export default App
