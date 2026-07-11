@@ -8,7 +8,8 @@ from dbm.dumb import error
 from typing import Optional
 from urllib.parse import quote
 
-from fastapi import APIRouter, Response, UploadFile, File, Query, Form
+from fastapi import APIRouter, Response, UploadFile, File, Query, Form, Body
+from pydantic import BaseModel
 
 from Base.RicUtils.dataUtils import remove_none
 from Base.RicUtils.excelUtils import dict_list_to_excel, excel_to_dict_list
@@ -21,6 +22,44 @@ from Education.services.questionService import get_question_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/education/question")
+
+
+# =========================
+# Request Models (JSON)
+# =========================
+
+class CreateQuestionRequest(BaseModel):
+    question_text: str
+    answer: str
+    grade: int
+    subject: str
+    question_type: str
+    question_html: Optional[str] = None
+    question_markdown: Optional[str] = None
+    analysis: Optional[str] = None
+    hint: Optional[str] = None
+    knowledge_points: Optional[str] = None
+    ai_judge_prompt: Optional[str] = None
+    difficulty_level: Optional[int] = 3
+    difficulty_label: Optional[str] = None
+    created_by: Optional[int] = 505
+
+
+class UpdateQuestionRequest(BaseModel):
+    question_text: str
+    answer: str
+    grade: int
+    subject: str
+    question_type: str
+    question_html: Optional[str] = None
+    question_markdown: Optional[str] = None
+    analysis: Optional[str] = None
+    hint: Optional[str] = None
+    knowledge_points: Optional[str] = None
+    ai_judge_prompt: Optional[str] = None
+    difficulty_level: Optional[int] = 3
+    difficulty_label: Optional[str] = None
+    updated_by: Optional[int] = 505
 
 
 @router.get("/subjects")
@@ -385,36 +424,12 @@ def get_question_detail(question_id: int):
 
 
 @router.post("")
-def create_question(
-    question_text: str = Form(..., description="题干"),
-    question_html: Optional[str] = Form(None, description="题干 HTML"),
-    question_markdown: Optional[str] = Form(None, description="题干 Markdown"),
-    answer: str = Form(..., description="标准答案"),
-    analysis: Optional[str] = Form(None, description="题目解析"),
-    hint: Optional[str] = Form(None, description="解题提示"),
-    knowledge_points: Optional[str] = Form(None, description="知识点"),
-    ai_judge_prompt: Optional[str] = Form(None, description="AI 判题提示词"),
-    grade: int = Form(..., description="年级"),
-    subject: str = Form(..., description="科目"),
-    question_type: str = Form(..., description="题型"),
-    difficulty_level: Optional[int] = Form(3, description="难度等级"),
-    difficulty_label: Optional[str] = Form(None, description="难度标签"),
-    created_by: Optional[int] = Form(505, description="创建者 ID")
-):
+def create_question(req: CreateQuestionRequest):
     """
     创建题目
 
     Args:
-        question_text: 题干
-        answer: 标准答案
-        analysis: 题目解析
-        hint: 解题提示
-        knowledge_points: 知识点
-        grade: 年级
-        subject: 科目
-        question_type: 题型
-        difficulty_level: 难度等级
-        created_by: 创建者 ID
+        req: 题目数据（JSON）
 
     Returns:
         创建的题目信息
@@ -422,20 +437,20 @@ def create_question(
     try:
         question = QuestionPo(
             question_uuid=str(uuid.uuid4()),
-            question_text=question_text,
-            question_html=question_html,
-            question_markdown=question_markdown,
-            answer=answer,
-            analysis=analysis,
-            hint=hint,
-            knowledge_points=knowledge_points,
-            ai_judge_prompt=ai_judge_prompt,
-            grade=grade,
-            subject=subject,
-            question_type=question_type,
-            difficulty_level=difficulty_level,
-            difficulty_label=difficulty_label,
-            created_by=created_by or 505,
+            question_text=req.question_text,
+            question_html=req.question_html,
+            question_markdown=req.question_markdown,
+            answer=req.answer,
+            analysis=req.analysis,
+            hint=req.hint,
+            knowledge_points=req.knowledge_points,
+            ai_judge_prompt=req.ai_judge_prompt,
+            grade=req.grade,
+            subject=req.subject,
+            question_type=req.question_type,
+            difficulty_level=req.difficulty_level,
+            difficulty_label=req.difficulty_label,
+            created_by=req.created_by or 505,
             status=0
         )
         question.save()
@@ -451,38 +466,13 @@ def create_question(
 
 
 @router.put("/{question_id}")
-def update_question(
-    question_id: int,
-    question_text: str = Form(..., description="题干"),
-    question_html: Optional[str] = Form(None, description="题干 HTML"),
-    question_markdown: Optional[str] = Form(None, description="题干 Markdown"),
-    answer: str = Form(..., description="标准答案"),
-    analysis: Optional[str] = Form(None, description="题目解析"),
-    hint: Optional[str] = Form(None, description="解题提示"),
-    knowledge_points: Optional[str] = Form(None, description="知识点"),
-    ai_judge_prompt: Optional[str] = Form(None, description="AI 判题提示词"),
-    grade: int = Form(..., description="年级"),
-    subject: str = Form(..., description="科目"),
-    question_type: str = Form(..., description="题型"),
-    difficulty_level: Optional[int] = Form(3, description="难度等级"),
-    difficulty_label: Optional[str] = Form(None, description="难度标签"),
-    updated_by: Optional[int] = Form(505, description="更新者 ID")
-):
+def update_question(question_id: int, req: UpdateQuestionRequest):
     """
     更新题目
 
     Args:
         question_id: 题目 ID
-        question_text: 题干
-        answer: 标准答案
-        analysis: 题目解析
-        hint: 解题提示
-        knowledge_points: 知识点
-        grade: 年级
-        subject: 科目
-        question_type: 题型
-        difficulty_level: 难度等级
-        updated_by: 更新者 ID
+        req: 题目数据（JSON）
 
     Returns:
         更新后的题目信息
@@ -493,20 +483,20 @@ def update_question(
             return HttpResponse.error("题目不存在")
 
         # 更新字段
-        question.question_text = question_text
-        question.question_html = question_html
-        question.question_markdown = question_markdown
-        question.answer = answer
-        question.analysis = analysis
-        question.hint = hint
-        question.knowledge_points = knowledge_points
-        question.ai_judge_prompt = ai_judge_prompt
-        question.grade = grade
-        question.subject = subject
-        question.question_type = question_type
-        question.difficulty_level = difficulty_level
-        question.difficulty_label = difficulty_label
-        question.updated_by = updated_by or 505
+        question.question_text = req.question_text
+        question.question_html = req.question_html
+        question.question_markdown = req.question_markdown
+        question.answer = req.answer
+        question.analysis = req.analysis
+        question.hint = req.hint
+        question.knowledge_points = req.knowledge_points
+        question.ai_judge_prompt = req.ai_judge_prompt
+        question.grade = req.grade
+        question.subject = req.subject
+        question.question_type = req.question_type
+        question.difficulty_level = req.difficulty_level
+        question.difficulty_label = req.difficulty_label
+        question.updated_by = req.updated_by or 505
 
         question.save()
 
