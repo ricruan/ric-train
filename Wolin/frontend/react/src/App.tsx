@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { HashRouter, Routes, Route, NavLink } from 'react-router-dom';
 
 const InterviewAnalysis = lazy(() => import('./pages/InterviewAnalysis'));
@@ -7,18 +7,11 @@ const InterviewChat = lazy(() => import('./pages/InterviewChat'));
 const InterviewRecordManager = lazy(() => import('./pages/InterviewRecordManager'));
 
 const navItems = [
-  { path: '/', label: '面试分析' },
-  { path: '/camera-test', label: '摄像头测试' },
-  { path: '/interview-chat', label: '模拟面试' },
-  { path: '/record-manager', label: '记录管理' },
+  { path: '/', label: '面试分析', icon: '📊' },
+  { path: '/record-manager', label: '记录管理', icon: '📋' },
+  { path: '/interview-chat', label: '模拟面试', icon: '🎤' },
+  { path: '/camera-test', label: '摄像头测试', icon: '📷' },
 ];
-
-const NavLogo = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="url(#navGrad)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8, verticalAlign: 'middle' }}>
-    <defs><linearGradient id="navGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#00d4ff" /><stop offset="100%" stopColor="#7c3aed" /></linearGradient></defs>
-    <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
-  </svg>
-);
 
 const loadingFallback = (
   <div className="loading" style={{ padding: '80px', textAlign: 'center' }}>
@@ -27,26 +20,39 @@ const loadingFallback = (
 );
 
 function Layout() {
+  const [collapsed, setCollapsed] = useState(false);
+
   return (
-    <div className="app">
-      <nav className="app-nav">
-        <div className="nav-brand">
-          <NavLogo />
-          AI 面试系统
+    <div className="app-layout">
+      {/* 侧边栏 */}
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-header">
+          <span className="sidebar-logo">🎯</span>
+          {!collapsed && <span className="sidebar-title">AI 面试系统</span>}
         </div>
-        <div className="nav-links">
+
+        <nav className="sidebar-menu">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
-              className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              className={({ isActive }) => `menu-item ${isActive ? 'active' : ''}`}
             >
-              {item.label}
+              <span className="menu-icon">{item.icon}</span>
+              {!collapsed && <span className="menu-label">{item.label}</span>}
             </NavLink>
           ))}
+        </nav>
+
+        <div className="sidebar-footer">
+          <button className="collapse-btn" onClick={() => setCollapsed(!collapsed)}>
+            {collapsed ? '▶' : '◀'}
+          </button>
         </div>
-      </nav>
-      <main className="app-content">
+      </aside>
+
+      {/* 主内容区域 */}
+      <main className="main-content">
         <Routes>
           <Route path="/" element={<Suspense fallback={loadingFallback}><InterviewAnalysis /></Suspense>} />
           <Route path="/camera-test" element={<Suspense fallback={loadingFallback}><CameraTest /></Suspense>} />
