@@ -183,6 +183,19 @@ async def get_download_urls(record_id: int):
                 if url:
                     files['text'] = {'url': url, 'label': f'{record.user_name}_{record.company_name}.txt'}
 
+        # 音频原始文本：优先使用 DB 路径，回退到模板路径
+        if record.audio_text_origin_path:
+            if default_minio_client.stat_object('audio-text-origin', record.audio_text_origin_path):
+                url = default_minio_client.get_presigned_url('audio-text-origin', record.audio_text_origin_path, expiry_hours=2)
+                if url:
+                    files['text_origin'] = {'url': url, 'label': os.path.basename(record.audio_text_origin_path)}
+        elif record.user_name and record.company_name:
+            fallback = f"{record.user_name}/{record.user_name}_{record.company_name}_origin.txt"
+            if default_minio_client.stat_object('audio-text-origin', fallback):
+                url = default_minio_client.get_presigned_url('audio-text-origin', fallback, expiry_hours=2)
+                if url:
+                    files['text_origin'] = {'url': url, 'label': f'{record.user_name}_{record.company_name}_origin.txt'}
+
         # 面试报告：优先使用 DB 路径，回退到模板路径
         if record.report_file_path:
             if default_minio_client.stat_object('interview-report', record.report_file_path):

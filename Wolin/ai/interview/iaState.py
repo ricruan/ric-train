@@ -69,6 +69,7 @@ class IAState(BaseState):
     # MinIO 实际存储路径（上传成功后覆盖默认计算路径）
     audio_minio_path: Optional[str] = Field(None, description='音频 MinIO 实际路径')
     audio_text_minio_path: Optional[str] = Field(None, description='音频文本 MinIO 实际路径')
+    audio_text_origin_minio_path: Optional[str] = Field(None, description='原始音频文本 MinIO 实际路径')
     report_minio_path: Optional[str] = Field(None, description='报告 MinIO 实际路径')
     resume_minio_path: Optional[str] = Field(None, description='简历 MinIO 实际路径')
 

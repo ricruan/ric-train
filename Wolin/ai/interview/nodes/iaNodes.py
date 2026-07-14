@@ -16,7 +16,7 @@ from Base.Service.asrService import audio_file_2_text_with_cache
 from Wolin.ai.interview.iaState import IAState, ResumeInfo
 from Wolin.prompt.insertviewPrompt import ANALYSIS_START_PROMPT, RESUME_JSON_EXTRACT_PROMPT, COMBINE_SLICE_PROMPT, \
     render, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, test, CORE_QA_ANALYSIS_PROMPT, RESUME_ANALYSIS_PROMPT, \
-    INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT
+    INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, COMBINE_SLICE_PROMPT_V2
 from Wolin.service import get_email_service
 from Wolin.service.interviewRecordService import get_interview_record_service
 from WorkFlow import BaseWorkFlow, load_node
@@ -112,12 +112,20 @@ def audio_handle(state: IAState):
 
     combine_prompt = render(COMBINE_SLICE_PROMPT, {"resume_info": state.resume_info.model_dump()})
 
+    origin_combine_prompt = render(COMBINE_SLICE_PROMPT_V2, {"resume_info": state.resume_info.model_dump()})
+
     @cache_with_params(key_template="get_combine_text:{str_hash_code}", expire=3000)
     def get_combine_text(str_hash_code: str):
         return default_qwen_llm.chat([SystemMessages(combine_prompt), UserMessages(str(ordered_results))])
 
+    @cache_with_params(key_template="get_combine_text:{str_hash_code}", expire=3000)
+    def get_origin_combine_text(str_hash_code: str):
+        return default_qwen_llm.chat([SystemMessages(origin_combine_prompt), UserMessages(str(ordered_results))])
+
     # 合并碎片文本
     combine_text = get_combine_text(str_hash_code=short_unique_hash(str(ordered_results)))
+
+    origin_combine_text = get_origin_combine_text(str_hash_code=short_unique_hash(str(ordered_results)))
 
     try:
         actual_name = default_minio_client.str_list_2_minio(str_list=combine_text,
@@ -127,8 +135,18 @@ def audio_handle(state: IAState):
             state.audio_text_minio_path = actual_name
     except Exception as e:
         logger.error(f"{state.api_params.user_name}Audio-Text 文件上传 MinIO 时发生异常：{e}")
+
+    try:
+        actual_name = default_minio_client.str_list_2_minio(str_list=origin_combine_text,
+                                              bucket_name='audio-text-origin',
+                                              object_name=state.audio_text_path.replace('.txt', '_origin.txt'))
+        if actual_name:
+            state.audio_text_origin_minio_path = actual_name
+    except Exception as e:
+        logger.error(f"{state.api_params.user_name}Audio-Text-Origin 文件上传 MinIO 时发生异常：{e}")
+
     state.asr_info.audio_text = combine_text
-    return {'asr_info': {"audio_text": combine_text}, 'audio_minio_path': state.audio_minio_path, 'audio_text_minio_path': state.audio_text_minio_path}
+    return {'asr_info': {"audio_text": combine_text}, 'audio_minio_path': state.audio_minio_path, 'audio_text_minio_path': state.audio_text_minio_path, 'audio_text_origin_minio_path': state.audio_text_origin_minio_path}
 
 
 @graph_node

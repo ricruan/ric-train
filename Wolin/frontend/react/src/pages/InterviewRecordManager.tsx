@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchRecords, fetchRecord, createRecord, updateRecord, deleteRecord, fetchDownloadUrls } from '@/api/records';
+import { fetchRecords, fetchRecord, createRecord, updateRecord, fetchDownloadUrls } from '@/api/records';
 import type { InterviewRecord } from '@/types';
 
 type DetailTab = 'basic' | 'files' | 'qa' | 'report' | 'raw';
@@ -303,7 +303,7 @@ export default function InterviewRecordManager() {
   const doSearch = useCallback(() => {
     setPage(1);
     loadRecords(1, pageSize);
-  }, [pageSize]);
+  }, [pageSize, searchUser, searchCompany, searchEmail, searchStatus, searchDateStart, searchDateEnd]);
 
   const loadRecords = async (p: number, ps: number) => {
     setLoading(true);
@@ -412,16 +412,6 @@ export default function InterviewRecordManager() {
       loadRecords(page, pageSize);
     } catch {
       alert(`${formMode === 'edit' ? '更新' : '创建'}失败`);
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    if (!confirm('确认删除此记录？此操作不可恢复。')) return;
-    try {
-      await deleteRecord(id);
-      loadRecords(page, pageSize);
-    } catch {
-      alert('删除失败');
     }
   };
 
@@ -596,7 +586,8 @@ export default function InterviewRecordManager() {
         {/* Toolbar */}
         <div className="toolbar">
           <span className="record-count">共 <strong>{total}</strong> 条记录</span>
-          <button className="btn btn-success" onClick={openCreate}>+ 新增记录</button>
+          {/* 新增按钮 - 待鉴权完成后恢复 */}
+          {/* <button className="btn btn-success" onClick={openCreate}>+ 新增记录</button> */}
         </div>
 
         {/* Loading */}
@@ -633,8 +624,8 @@ export default function InterviewRecordManager() {
                       <td>
                         <div className="action-btns">
                           <button className="btn btn-info btn-sm" onClick={() => viewDetail(r.id)}>详情</button>
-                          <button className="btn btn-primary btn-sm" onClick={() => openEdit(r.id)}>编辑</button>
-                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(r.id)}>删除</button>
+                          {/* 编辑按钮 - 待鉴权完成后恢复 */}
+                          {/* <button className="btn btn-primary btn-sm" onClick={() => openEdit(r.id)}>编辑</button> */}
                         </div>
                       </td>
                     </tr>
@@ -807,7 +798,7 @@ export default function InterviewRecordManager() {
                   ) : (
                     <div className="file-download-grid">
                       {Object.entries(downloadUrls).map(([key, info]) => {
-                        const iconMap: Record<string, string> = { audio: '🎵', text: '📝', report: '📊', resume: '📄' };
+                        const iconMap: Record<string, string> = { audio: '🎵', text_origin: '📝', text: '📝', report: '📊', resume: '📄' };
                         const icon = Object.entries(iconMap).find(([k]) => key.startsWith(k))?.[1] || '📎';
                         return (
                           <a key={key} className="file-card" href={info.url} target="_blank" rel="noopener noreferrer">

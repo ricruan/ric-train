@@ -112,7 +112,7 @@ export default function CameraTest() {
   };
 
   return (
-    <div className="page">
+    <div className="camera-test-page">
       <h1>模拟面试</h1>
       <p className="subtitle">摄像头画面与语音识别</p>
 
