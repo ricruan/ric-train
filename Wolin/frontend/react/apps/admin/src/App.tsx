@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { HashRouter, Routes, Route, Navigate, NavLink, Outlet } from 'react-router-dom';
-import { AuthProvider, RequireAuth } from '@interview/shared';
+import { HashRouter, Routes, Route, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { AuthProvider, RequireAuth, useAuth } from '@interview/shared';
 
 const Login = lazy(() => import('./pages/Login'));
 const RecordManager = lazy(() => import('./pages/records/RecordManager'));
@@ -12,6 +12,9 @@ const loadingFallback = (
 );
 
 function AdminLayout() {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -30,9 +33,8 @@ function AdminLayout() {
         </nav>
         <div className="sidebar-footer">
           <button className="collapse-btn" onClick={() => {
-            localStorage.removeItem('interview_access_token');
-            localStorage.removeItem('interview_refresh_token');
-            window.location.hash = '#/login';
+            logout();
+            navigate('/login', { replace: true });
           }}>
             🚪
           </button>
