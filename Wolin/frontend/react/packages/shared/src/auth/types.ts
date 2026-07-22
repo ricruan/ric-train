@@ -1,3 +1,5 @@
+import type { MenuItem } from '../api/menus.js';
+
 export interface User {
   id: number;
   username: string;
@@ -20,8 +22,10 @@ export interface AuthTokens {
 export interface AuthState {
   user: User | null;
   ready: boolean;
+  menus: MenuItem[];
   login: (form: LoginForm) => Promise<void>;
   logout: () => void;
+  hasPermission: (permission: string) => boolean;
 }
 
 export interface AuthStrategy {

@@ -23,7 +23,8 @@ export { RequireAuth } from './auth/RequireAuth.js';
 export { getToken, setTokens, clearToken } from './auth/token.js';
 
 // API
-export { createApiClient } from './api/client.js';
+export { createApiClient, apiClient } from './api/client.js';
+export { fetchUserMenus, type MenuItem } from './api/menus.js';
 
 // Toast
 export { Toast } from './components/Toast.js';

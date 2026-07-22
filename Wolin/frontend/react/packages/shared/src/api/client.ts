@@ -29,3 +29,6 @@ export function createApiClient(onUnauthorized: () => void): AxiosInstance {
 
   return client;
 }
+
+/** Shared apiClient singleton with auth interceptors (no redirect on 401). */
+export const apiClient = createApiClient(() => {});
