@@ -29,6 +29,7 @@ export default function RecordManager() {
   const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState<FilterValues>(emptyFilters);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Form modal
   const [formModal, setFormModal] = useState(false);
@@ -61,7 +62,7 @@ export default function RecordManager() {
       }
     };
     fetchRecordsFn();
-  }, [page, pageSize, filters]);
+  }, [page, pageSize, filters, refreshKey]);
 
   const doSearch = () => { setPage(1); };
   const resetSearch = () => { setFilters(emptyFilters); setPage(1); };
@@ -81,6 +82,7 @@ export default function RecordManager() {
     try {
       await deleteRecord(deleteTarget);
       Toast.success('删除成功');
+      setRefreshKey(k => k + 1);
     } catch {
       Toast.error('删除失败');
     } finally {
@@ -90,6 +92,7 @@ export default function RecordManager() {
 
   const handleFormSuccess = () => {
     setFormModal(false);
+    setRefreshKey(k => k + 1);
   };
 
   return (
