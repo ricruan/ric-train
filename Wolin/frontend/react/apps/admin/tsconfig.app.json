@@ -19,7 +19,8 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "composite": true
+    "composite": true,
+    "strict": true
   },
   "include": ["src"]
 }
