@@ -1,9 +1,9 @@
 import { lazy, Suspense } from 'react';
-import { HashRouter, Routes, Route, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { AuthProvider, RequireAuth, useAuth } from '@interview/shared';
+import { HashRouter, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
+import { AuthProvider, RequireAuth, useAuth, DynamicRouter } from '@interview/shared';
+import { componentMap } from './router/componentMap';
 
 const Login = lazy(() => import('./pages/Login'));
-const RecordManager = lazy(() => import('./pages/records/RecordManager'));
 
 const loadingFallback = (
   <div className="loading" style={{ padding: '80px', textAlign: 'center' }}>
@@ -12,7 +12,7 @@ const loadingFallback = (
 );
 
 function AdminLayout() {
-  const { logout } = useAuth();
+  const { logout, menus } = useAuth();
   const navigate = useNavigate();
 
   return (
@@ -23,13 +23,16 @@ function AdminLayout() {
           <span className="sidebar-title">管理后台</span>
         </div>
         <nav className="sidebar-menu">
-          <NavLink
-            to="/records"
-            className={({ isActive }) => `menu-item ${isActive ? 'active' : ''}`}
-          >
-            <span className="menu-icon">📋</span>
-            <span className="menu-label">记录管理</span>
-          </NavLink>
+          {menus.map((menu) => (
+            <NavLink
+              key={menu.id}
+              to={menu.path}
+              className={({ isActive }) => `menu-item ${isActive ? 'active' : ''}`}
+            >
+              {menu.icon && <span className="menu-icon">{menu.icon}</span>}
+              <span className="menu-label">{menu.name}</span>
+            </NavLink>
+          ))}
         </nav>
         <div className="sidebar-footer">
           <button className="collapse-btn" onClick={() => {
@@ -42,7 +45,7 @@ function AdminLayout() {
       </aside>
       <main className="main-content">
         <Suspense fallback={loadingFallback}>
-          <Outlet />
+          <DynamicRouter menus={menus} componentMap={componentMap} />
         </Suspense>
       </main>
     </div>
@@ -55,15 +58,11 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<Suspense fallback={loadingFallback}><Login /></Suspense>} />
-          <Route element={
+          <Route path="*" element={
             <RequireAuth requireAdmin>
               <AdminLayout />
             </RequireAuth>
-          }>
-            <Route index element={<Navigate to="/records" replace />} />
-            <Route path="/records" element={<RecordManager />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/records" replace />} />
+          } />
         </Routes>
       </AuthProvider>
     </HashRouter>
