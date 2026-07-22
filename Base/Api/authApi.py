@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from Base.RicUtils.httpUtils import HttpResponse
 from Base.Service.authService import AuthService
 from Base.Models.roleModel import Permission
+from Base.Models.menuModel import MenuModel
 
 router = APIRouter(prefix="/api/auth", tags=["认证与用户管理"])
 
@@ -84,6 +85,33 @@ class UpdateRolePermissionsRequest(BaseModel):
     role_name: str
     permissions: List[str]
     source_module: str = "default"
+
+
+class CreateMenuRequest(BaseModel):
+    parent_id: Optional[int] = None
+    name: str = Field(..., max_length=50)
+    path: str = Field(..., max_length=200)
+    component: str = Field(..., max_length=200)
+    icon: Optional[str] = Field(None, max_length=50)
+    permission: Optional[str] = Field(None, max_length=100)
+    sort_order: int = 0
+    is_visible: bool = True
+    source_module: str = "default"
+
+
+class UpdateMenuRequest(BaseModel):
+    parent_id: Optional[int] = None
+    name: Optional[str] = Field(None, max_length=50)
+    path: Optional[str] = Field(None, max_length=200)
+    component: Optional[str] = Field(None, max_length=200)
+    icon: Optional[str] = Field(None, max_length=50)
+    permission: Optional[str] = Field(None, max_length=100)
+    sort_order: Optional[int] = None
+    is_visible: Optional[bool] = None
+
+
+class SortMenuRequest(BaseModel):
+    items: List[dict] = Field(..., description="[{id, sort_order}]")
 
 
 security = HTTPBearer(auto_error=False)
@@ -366,6 +394,74 @@ def get_user_roles(user_id: int, credentials: HTTPAuthorizationCredentials = Dep
         raise HTTPException(status_code=404, detail="用户不存在")
     role_info = AuthService.get_user_role_info(user_id, target.source_module)
     return HttpResponse.ok(data={"user_id": user_id, "username": target.username, **role_info})
+
+
+# =========================
+# 菜单管理 (需 system:config)
+# =========================
+
+@router.get("/menus")
+def get_menus(
+    source_module: str = "default",
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    _require_permission(credentials, Permission.SYSTEM_CONFIG)
+    menus = MenuModel.find_by_module(source_module)
+    tree = MenuModel.build_tree(menus)
+    return HttpResponse.ok(data={"menus": tree})
+
+
+@router.post("/menus")
+def create_menu(
+    req: CreateMenuRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    _require_permission(credentials, Permission.SYSTEM_CONFIG)
+    menu = MenuModel(**req.model_dump())
+    menu.save()
+    return HttpResponse.ok(data={"id": menu.id}, msg="创建成功")
+
+
+@router.put("/menus/sort")
+def sort_menus(
+    req: SortMenuRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    _require_permission(credentials, Permission.SYSTEM_CONFIG)
+    for item in req.items:
+        menu = MenuModel.find_by_id(item["id"])
+        if menu:
+            menu.update(sort_order=item["sort_order"])
+    return HttpResponse.ok(msg="排序更新成功")
+
+
+@router.put("/menus/{menu_id}")
+def update_menu(
+    menu_id: int,
+    req: UpdateMenuRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    _require_permission(credentials, Permission.SYSTEM_CONFIG)
+    menu = MenuModel.find_by_id(menu_id)
+    if not menu:
+        raise HTTPException(status_code=404, detail="菜单不存在")
+
+    update_data = req.model_dump(exclude_none=True)
+    for key, value in update_data.items():
+        setattr(menu, key, value)
+    menu.save()
+
+    return HttpResponse.ok(msg="更新成功")
+
+
+@router.delete("/menus/{menu_id}")
+def delete_menu(
+    menu_id: int,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+):
+    _require_permission(credentials, Permission.SYSTEM_CONFIG)
+    deleted = MenuModel.delete_with_children(menu_id)
+    return HttpResponse.ok(data={"deleted": deleted}, msg=f"已删除 {deleted} 条菜单")
 
 
 # =========================
