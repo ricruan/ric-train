@@ -49,7 +49,13 @@ virtualenv/
 *.csv
 *.xlsx
 *.xls
+# JSON 数据文件排除（配置文件除外）
 *.json
+!package.json
+!tsconfig*.json
+!eslint.config.json
+!*.config.json
+!pnpm-lock.yaml
 *.pkl
 *.pickle
 *.parquet
