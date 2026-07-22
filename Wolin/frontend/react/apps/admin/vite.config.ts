@@ -13,7 +13,11 @@ export default defineConfig({
     port: 3001,
     proxy: {
       '/interview': {
-        target: 'http://localhost:8001',
+        target: 'http://localhost:8002',
+        changeOrigin: true,
+      },
+      '/api': {
+        target: 'http://localhost:8002',
         changeOrigin: true,
       },
     },
