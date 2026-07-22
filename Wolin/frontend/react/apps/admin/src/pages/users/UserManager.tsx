@@ -15,7 +15,7 @@ export default function UserManager() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const data = await getUsers({ keyword, limit: 100 });
+      const data = await getUsers({ keyword, limit: 100, source_module: 'wolin' });
       setUsers(data.users || []);
     } catch (err) {
       Toast.error('加载用户列表失败');

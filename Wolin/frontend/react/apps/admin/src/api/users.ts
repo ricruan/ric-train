@@ -11,7 +11,7 @@ export interface User {
   created_at: string;
 }
 
-export async function getUsers(params?: { keyword?: string; limit?: number; offset?: number }) {
+export async function getUsers(params?: { keyword?: string; limit?: number; offset?: number; source_module?: string }) {
   const res = await apiClient.get('/api/auth/users', { params });
   return res.data.data;
 }

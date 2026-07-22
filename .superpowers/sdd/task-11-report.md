@@ -130,7 +130,7 @@ cd Wolin/frontend/react && pnpm build
 
 ## Commits
 
-- Commit hash: (pending — to be committed)
+- Commit hash: ddc8d08c
 - Commit message: `test: complete integration testing for Wolin auth & menu system`
 - Files changed:
   - `Wolin/frontend/react/apps/admin/vite.config.ts` — Added `/api` proxy, updated port to 8002
