@@ -11,6 +11,7 @@
   "dependencies": {
     "@ant-design/icons": "^6.3.2",
     "@interview/shared": "workspace:*",
+    "antd": "^6.5.1",
     "axios": "^1.16.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
