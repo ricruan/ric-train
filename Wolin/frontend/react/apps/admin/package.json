@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.3.2",
     "@interview/shared": "workspace:*",
     "axios": "^1.16.1",
     "react": "^19.2.6",

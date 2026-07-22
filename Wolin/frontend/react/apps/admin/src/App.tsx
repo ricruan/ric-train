@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { HashRouter, Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import { AuthProvider, RequireAuth, useAuth, DynamicRouter } from '@interview/shared';
 import { componentMap } from './router/componentMap';
+import { getIcon } from './utils/iconMap';
 
 const Login = lazy(() => import('./pages/Login'));
 
@@ -29,7 +30,12 @@ function AdminLayout() {
               to={menu.path}
               className={({ isActive }) => `menu-item ${isActive ? 'active' : ''}`}
             >
-              {menu.icon && <span className="menu-icon">{menu.icon}</span>}
+              {(() => {
+                const IconComponent = getIcon(menu.icon);
+                return IconComponent ? (
+                  <span className="menu-icon"><IconComponent /></span>
+                ) : null;
+              })()}
               <span className="menu-label">{menu.name}</span>
             </NavLink>
           ))}
