@@ -242,6 +242,27 @@ def change_password(req: ChangePasswordRequest, credentials: HTTPAuthorizationCr
     return HttpResponse.ok(msg="密码修改成功")
 
 
+@router.get("/me/menus")
+def get_my_menus(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """获取当前用户可见的菜单树"""
+    user = _get_current_user(credentials)
+    role_info = AuthService.get_user_role_info(user.id, user.source_module)
+
+    # 获取用户所有菜单
+    all_menus = MenuModel.find_by_module(user.source_module)
+
+    # 过滤：permission 为空 OR permission 在用户权限中
+    user_permissions = set(role_info["permissions"])
+    visible_menus = [
+        menu for menu in all_menus
+        if not menu.permission or menu.permission in user_permissions
+    ]
+
+    # 组装成树形结构
+    tree = MenuModel.build_tree(visible_menus)
+    return HttpResponse.ok(data={"menus": tree})
+
+
 # =========================
 # 用户管理 (需 user:manage)
 # =========================
