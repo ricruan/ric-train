@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { fetchRecords, fetchRecord, deleteRecord } from '@/api/records';
+import { useState, useEffect } from 'react';
+import { fetchRecords, deleteRecord } from '@/api/records';
 import { Toast } from '@interview/shared';
 import type { InterviewRecord } from '@interview/shared';
 import FilterPanel from './FilterPanel';
@@ -41,44 +41,39 @@ export default function RecordManager() {
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null);
 
-  const loadRecords = useCallback(async (p: number, ps: number) => {
-    setLoading(true);
-    const params: Record<string, unknown> = { page: p, page_size: ps };
-    for (const [k, v] of Object.entries(filters)) {
-      if (v && v.trim()) params[k] = k.includes('date') ? v : v.trim();
-    }
-    try {
-      const res = await fetchRecords(params as any);
-      if (res.data.status_code === 200 && res.data.data) {
-        setRecords(res.data.data.items);
-        setTotal(res.data.data.total);
-        setPage(res.data.data.page);
-        setPageSize(res.data.data.page_size);
+  useEffect(() => {
+    const fetchRecordsFn = async () => {
+      setLoading(true);
+      const params: Record<string, unknown> = { page, page_size: pageSize };
+      for (const [k, v] of Object.entries(filters)) {
+        if (v && v.trim()) params[k] = k.includes('date') ? v : v.trim();
       }
-    } catch {
-      Toast.error('加载记录失败');
-    } finally {
-      setLoading(false);
-    }
-  }, [filters]);
+      try {
+        const res = await fetchRecords(params as any);
+        if (res.data.status_code === 200 && res.data.data) {
+          setRecords(res.data.data.items);
+          setTotal(res.data.data.total);
+        }
+      } catch {
+        Toast.error('加载记录失败');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRecordsFn();
+  }, [page, pageSize, filters]);
 
-  useEffect(() => { loadRecords(page, pageSize); }, []);
-
-  const doSearch = () => { setPage(1); loadRecords(1, pageSize); };
-  const resetSearch = () => { setFilters(emptyFilters); setPage(1); loadRecords(1, pageSize); };
+  const doSearch = () => { setPage(1); };
+  const resetSearch = () => { setFilters(emptyFilters); setPage(1); };
   const handleFilterChange = (key: keyof FilterValues, value: string) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
   const openCreate = () => { setFormMode('create'); setFormId(null); setFormModal(true); };
-  const openEdit = async (id: number) => {
-    try {
-      const res = await fetchRecord(id);
-      if (res.data.status_code !== 200 || !res.data.data) {
-        Toast.error('获取记录失败'); return;
-      }
-      setFormMode('edit'); setFormId(id); setFormModal(true);
-    } catch { Toast.error('网络错误'); }
+  const openEdit = (id: number) => {
+    setFormMode('edit');
+    setFormId(id);
+    setFormModal(true);
   };
 
   const handleDelete = async () => {
@@ -86,14 +81,15 @@ export default function RecordManager() {
     try {
       await deleteRecord(deleteTarget);
       Toast.success('删除成功');
+    } catch {
+      Toast.error('删除失败');
+    } finally {
       setDeleteTarget(null);
-      loadRecords(page, pageSize);
-    } catch { Toast.error('删除失败'); }
+    }
   };
 
   const handleFormSuccess = () => {
     setFormModal(false);
-    loadRecords(page, pageSize);
   };
 
   return (
@@ -124,8 +120,8 @@ export default function RecordManager() {
           onViewDetail={(id) => setDetailId(id)}
           onEdit={openEdit}
           onDelete={(id) => setDeleteTarget(id)}
-          onPageChange={(p) => { setPage(p); loadRecords(p, pageSize); }}
-          onPageSizeChange={(s) => { setPageSize(s); setPage(1); loadRecords(1, s); }}
+          onPageChange={(p) => setPage(p)}
+          onPageSizeChange={(s) => { setPageSize(s); setPage(1); }}
         />
       </div>
 
