@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { getInterviewQuestions, submitAnswer } from '@/api/interview';
-import type { InterviewQuestion } from '@interview/shared';
+import { Toast, type InterviewQuestion } from '@interview/shared';
 
 interface Message {
   id: number;
@@ -17,7 +17,6 @@ export default function InterviewChat() {
   const [questionsLoaded, setQuestionsLoaded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [recording, setRecording] = useState(false);
-  const [toast, setToast] = useState<{ text: string; type: string } | null>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -29,11 +28,6 @@ export default function InterviewChat() {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const recordUuidRef = useRef('');
   const isPlayingRef = useRef(false);
-
-  const showToast = useCallback((text: string, type = 'info') => {
-    setToast({ text, type });
-    setTimeout(() => setToast(null), 3000);
-  }, []);
 
   const scrollDown = useCallback(() => {
     if (chatMessagesRef.current) {
@@ -79,11 +73,11 @@ export default function InterviewChat() {
   const startChat = async () => {
     const trimmed = uuid.trim();
     if (!streamRef.current) {
-      showToast('摄像头未授权，无法开始面试', 'error');
+      Toast.error('摄像头未授权，无法开始面试');
       return;
     }
     if (!trimmed) {
-      showToast('请输入 UUID', 'error');
+      Toast.error('请输入 UUID');
       return;
     }
 
@@ -99,10 +93,10 @@ export default function InterviewChat() {
         setChatStarted(true);
         setQuestionsLoaded(true);
       } else {
-        showToast('未找到面试问题，请检查 UUID', 'error');
+        Toast.error('未找到面试问题，请检查 UUID');
       }
     } catch {
-      showToast('网络错误，无法加载问题', 'error');
+      Toast.error('网络错误，无法加载问题');
     } finally {
       setLoading(false);
     }
@@ -159,7 +153,7 @@ export default function InterviewChat() {
     if (recording || !streamRef.current) return;
     const audioTrack = streamRef.current.getAudioTracks()[0];
     if (!audioTrack) {
-      showToast('未检测到音频轨道', 'error');
+      Toast.error('未检测到音频轨道');
       return;
     }
     chunksRef.current = [];
@@ -180,7 +174,7 @@ export default function InterviewChat() {
 
   const handleRecordingComplete = async () => {
     if (chunksRef.current.length === 0) {
-      showToast('未录到音频数据', 'error');
+      Toast.error('未录到音频数据');
       return;
     }
 
@@ -206,10 +200,10 @@ export default function InterviewChat() {
         scrollDown();
         setTimeout(showNextQuestion, 300);
       } else {
-        showToast(`识别失败: ${data.msg || '未返回文字'}`, 'error');
+        Toast.error(`识别失败: ${data.msg || '未返回文字'}`);
       }
     } catch {
-      showToast('网络错误，无法提交回答', 'error');
+      Toast.error('网络错误，无法提交回答');
     }
   };
 
@@ -320,8 +314,6 @@ export default function InterviewChat() {
           </div>
         </div>
       )}
-
-      {toast && <div className={`toast ${toast.type} show`}>{toast.text}</div>}
     </div>
   );
 }
