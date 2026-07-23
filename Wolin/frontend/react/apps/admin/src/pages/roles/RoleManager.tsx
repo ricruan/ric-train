@@ -162,7 +162,7 @@ export default function RoleManager() {
 
       {modalVisible && (
         <div className="modal-overlay active" onClick={(e) => { if (e.target === e.currentTarget) setModalVisible(false); }}>
-          <div className="modal" style={{ maxWidth: 600 }}>
+          <div className="modal">
             <h2 className="modal-title">{editingRole ? '编辑权限' : '创建角色'}</h2>
             <div className="form-grid">
               {!editingRole && (
