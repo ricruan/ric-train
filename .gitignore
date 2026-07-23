@@ -177,3 +177,6 @@ tfevents*
 # 如果有大文件，推荐使用 Git LFS，而不是直接忽略
 
 *.pyc
+
+
+.playwright-mcp

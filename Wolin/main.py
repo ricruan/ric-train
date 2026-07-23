@@ -2,7 +2,7 @@ import logging
 from Base.Config.logConfig import setup_logging
 
 # 日志配置初始化
-setup_logging()
+setup_logging("wolin")
 
 logger = logging.getLogger(__name__)
 

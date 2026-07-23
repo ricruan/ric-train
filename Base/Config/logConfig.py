@@ -1,5 +1,6 @@
 import logging
 import sys
+from datetime import datetime
 from logging.handlers import TimedRotatingFileHandler
 
 from Base.Config.setting import settings
@@ -79,21 +80,27 @@ def get_log_level_from_env():
     return log_levels.get(log_level_str, logging.INFO)
 
 
-def setup_logging():
+def setup_logging(project_name: str = "app"):
     """
     配置日志系统，按天生成日志文件，日志级别从环境变量中获取
+
+    Args:
+        project_name: 项目名称，用于日志文件命名，默认为 "app"
     """
     # 创建根日志记录器
     root_logger = logging.getLogger()
-    
+
     # 检查是否已经配置过，避免重复添加处理器
     if root_logger.handlers:
         return
-    
+
     # 创建logs目录（如果不存在）
     project_root = find_project_root()
     log_dir = project_root / "logs"
     log_dir.mkdir(exist_ok=True)
+
+    # 获取当前日期（年月日）
+    date_str = datetime.now().strftime('%Y-%m-%d')
 
     # 创建日志格式
     log_format = logging.Formatter(
@@ -121,7 +128,7 @@ def setup_logging():
     # 使用 PID 区分进程，避免多实例同时运行时文件锁冲突 (Windows WinError 32)
     import os
     pid = os.getpid()
-    log_file_path = log_dir / f"app-{pid}.log"
+    log_file_path = log_dir / f"{project_name}-{date_str}-{pid}.log"
     file_handler = TimedRotatingFileHandler(
         filename=log_file_path,
         when='midnight',  # 每天午夜轮转
@@ -136,7 +143,7 @@ def setup_logging():
     root_logger.addHandler(file_handler)
 
     # 添加专门用于ERROR级别日志的文件处理器
-    error_log_file_path = log_dir / f"app-{pid}.error.log"
+    error_log_file_path = log_dir / f"{project_name}-{date_str}-{pid}.error.log"
     error_file_handler = TimedRotatingFileHandler(
         filename=error_log_file_path,
         when='midnight',  # 每天午夜轮转

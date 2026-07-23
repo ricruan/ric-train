@@ -4,7 +4,7 @@ from Education.api.router import router_register
 from Education.frontend.register import frontend_init
 
 # 日志配置初始化
-setup_logging()
+setup_logging("Edu")
 
 logger = logging.getLogger(__name__)
 
