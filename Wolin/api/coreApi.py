@@ -1,11 +1,13 @@
 import logging
 import os
 import threading
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, UploadFile, File, Form, Response
+from pydantic import BaseModel
 
 from Base.Ai.llms.qwenLlm import get_default_qwen_llm
 from Base.RicUtils.fileUtils import save_upload_file_to_temp
@@ -41,29 +43,28 @@ async def interview_analysis(
     if resume_file:
         resume_file_path = await save_upload_file_to_temp(resume_file, use_original_filename=True)
         logger.info(f"[上传] 简历已保存到: {resume_file_path}")
-    try:
-        def run_analysis():
-            try:
-                _state = IAState()
-                api_params = ApiParams(receive_email=receive_email,user_name=user_name,company_name=company_name)
-                _state.api_params = api_params
-                _state.asr_info.audio_path = audio_file_path
-                _state.resume_info.resume_path = resume_file_path
-                wf = get_workflow()
-                wf.invoke(_state)
-            except Exception as e:
-                logger.error(f"[后台线程] InterviewAnalysis 发生异常: {e}", stack_info=True)
+    def run_analysis():
+        try:
+            _state = IAState()
+            api_params = ApiParams(receive_email=receive_email, user_name=user_name, company_name=company_name)
+            _state.api_params = api_params
+            _state.asr_info.audio_path = audio_file_path
+            _state.resume_info.resume_path = resume_file_path
+            wf = get_workflow()
+            wf.invoke(_state)
+        except Exception as e:
+            logger.error(f"[后台线程] InterviewAnalysis 发生异常: {e}", stack_info=True)
+        finally:
+            # 工作流结束后清理临时文件（线程内清理，避免竞态）
+            if audio_file_path and os.path.exists(audio_file_path):
+                os.unlink(audio_file_path)
+            if resume_file_path and os.path.exists(resume_file_path):
+                os.unlink(resume_file_path)
 
-        # 3. 后台启动一个线程运行它（不阻塞当前请求）
-        # thread = threading.Thread(target=run_analysis)
-        # thread.start()
-        run_analysis()
-        return HttpResponse.ok(msg="正在分析中...")
-    finally:
-        if audio_file_path and os.path.exists(audio_file_path):
-            os.unlink(audio_file_path)
-        if resume_file_path and os.path.exists(resume_file_path):
-            os.unlink(resume_file_path)
+    # 后台线程运行分析流程，不阻塞当前请求
+    thread = threading.Thread(target=run_analysis, daemon=True)
+    thread.start()
+    return HttpResponse.ok(msg="正在分析中...")
 
 
 @router.post("audio_2_text")
@@ -73,7 +74,8 @@ async def audio_2_text_api(audio_file: UploadFile = File(...),):
         instance = InterviewAnalysis(audio_file=audio_file_path)
         content = instance.audio_2_text_public()
     except Exception as e:
-        raise e
+        logger.error(f"audio_2_text 失败: {e}", stack_info=True)
+        return HttpResponse.error(msg=f"音频转文本失败: {str(e)}")
     finally:
         if os.path.exists(audio_file_path):
             os.unlink(audio_file_path)
@@ -104,3 +106,42 @@ async def audio_to_text(audio_file: UploadFile = File(...)):
     finally:
         if audio_file_path and os.path.exists(audio_file_path):
             os.unlink(audio_file_path)
+
+
+# =========================
+# 前端日志 & 健康检查
+# =========================
+
+class ClientLogEntry(BaseModel):
+    level: str = 'INFO'
+    message: str
+    url: str = ''
+    stack: str = ''
+    timestamp: str = ''
+
+
+@router.post("/client-log")
+async def receive_client_log(entries: list[ClientLogEntry]):
+    """接收前端日志，写入 logs/frontend-YYYY-MM-DD.log"""
+    log_dir = Path(__file__).parent.parent.parent / "logs"
+    log_dir.mkdir(exist_ok=True)
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    log_file = log_dir / f"frontend-{date_str}.log"
+
+    with open(log_file, "a", encoding="utf-8") as f:
+        for entry in entries:
+            ts = entry.timestamp or datetime.now().isoformat()
+            line = f"[{ts}] [{entry.level}] {entry.message}"
+            if entry.url:
+                line += f" | url={entry.url}"
+            f.write(line + "\n")
+            if entry.stack:
+                f.write(f"  stack: {entry.stack}\n")
+
+    return HttpResponse.ok(msg="ok")
+
+
+@router.get("/health")
+async def health_check():
+    """健康检查端点，前端用于判断后端是否可达"""
+    return HttpResponse.ok(data={"status": "ok", "time": datetime.now().isoformat()})

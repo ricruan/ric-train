@@ -37,3 +37,6 @@ export { default as FileUploadProgress } from './components/FileUploadProgress.j
 
 // Hooks
 export { useFileUpload } from './hooks/useFileUpload.js';
+
+// Utils
+export { frontendLogger, pingBackend } from './utils/logger.js';

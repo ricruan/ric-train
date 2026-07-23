@@ -95,5 +95,9 @@ class IAState(BaseState):
         return self.audio_text_minio_path or f'{self.api_params.user_name}/{self.api_params.user_name}_{self.api_params.company_name}.txt'
 
     @property
+    def audio_text_origin_path(self):
+        return self.audio_text_origin_minio_path or f'{self.api_params.user_name}/{self.api_params.user_name}_{self.api_params.company_name}_origin.txt'
+
+    @property
     def resume_path(self):
         return self.resume_minio_path or f'{self.api_params.user_name}/'

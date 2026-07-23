@@ -1,5 +1,6 @@
 import tempfile
 import os
+import uuid
 from typing import Callable, Any
 
 from fastapi import UploadFile
@@ -21,14 +22,16 @@ async def save_upload_file_to_temp(
     """
     temp_file_path = ''
     if use_original_filename:
-        # 直接使用原始文件名
-        filename = upload_file.filename
+        # 使用原始文件名，但加 UUID 前缀避免并发上传同名文件互相覆盖
+        original_name = upload_file.filename or "upload"
+        name, ext = os.path.splitext(original_name)
+        unique_filename = f"{uuid.uuid4().hex[:8]}_{name}{ext}"
 
         # 获取系统临时目录
         temp_dir = tempfile.gettempdir()
 
         # 拼接完整的临时文件路径
-        temp_file_path = os.path.join(temp_dir, filename)
+        temp_file_path = os.path.join(temp_dir, unique_filename)
 
         # 写入文件内容
         content = await upload_file.read()

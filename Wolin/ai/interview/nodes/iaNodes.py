@@ -10,7 +10,7 @@ from Base.Ai.base import SystemMessages, UserMessages
 from Base.Client.minioClient import default_minio_client
 from Base.RicUtils.dataUtils import short_unique_hash
 from Base.RicUtils.docUtils import generate_doc_with_jinja
-from Base.RicUtils.pdfUtils import extract_pdf_text
+from Base.RicUtils.pdfUtils import extract_resume_text
 from Base.RicUtils.redisUtils import cache_with_params
 from Base.Service.asrService import audio_file_2_text_with_cache
 from Wolin.ai.interview.iaState import IAState, ResumeInfo
@@ -69,7 +69,7 @@ def extract_resume(state: IAState):
             state.resume_minio_path = actual_name
     except Exception as e:
         logger.error(f"{state.api_params.user_name} 简历 文件上传 MinIO 时发生异常：{e}")
-    resume_content = extract_pdf_text(state.resume_info.resume_path)
+    resume_content = extract_resume_text(state.resume_info.resume_path)
     resume_infos = default_qwen_llm.chat([SystemMessages(RESUME_JSON_EXTRACT_PROMPT), UserMessages(resume_content)])
     resume_info_json = json.loads(resume_infos)
     state.resume_info = ResumeInfo(**resume_info_json, resume_path=state.resume_info.resume_path)

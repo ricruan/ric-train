@@ -159,59 +159,59 @@ async def get_download_urls(record_id: int):
 
         # 音频：优先使用 DB 中存储的实际路径，回退到模板路径
         if record.audio_file_path:
-            if default_minio_client.stat_object('audios', record.audio_file_path):
+            if default_minio_client.object_exists('audios', record.audio_file_path):
                 url = default_minio_client.get_presigned_url('audios', record.audio_file_path, expiry_hours=2)
                 if url:
                     files['audio'] = {'url': url, 'label': os.path.basename(record.audio_file_path)}
         elif record.user_name and record.company_name:
             fallback = f"{record.user_name}/{record.user_name}_{record.company_name}.m4a"
-            if default_minio_client.stat_object('audios', fallback):
+            if default_minio_client.object_exists('audios', fallback):
                 url = default_minio_client.get_presigned_url('audios', fallback, expiry_hours=2)
                 if url:
                     files['audio'] = {'url': url, 'label': f'{record.user_name}_{record.company_name}.m4a'}
 
         # 音频文本：优先使用 DB 路径，回退到模板路径
         if record.audio_text_path:
-            if default_minio_client.stat_object('audio-text', record.audio_text_path):
+            if default_minio_client.object_exists('audio-text', record.audio_text_path):
                 url = default_minio_client.get_presigned_url('audio-text', record.audio_text_path, expiry_hours=2)
                 if url:
                     files['text'] = {'url': url, 'label': os.path.basename(record.audio_text_path)}
         elif record.user_name and record.company_name:
             fallback = f"{record.user_name}/{record.user_name}_{record.company_name}.txt"
-            if default_minio_client.stat_object('audio-text', fallback):
+            if default_minio_client.object_exists('audio-text', fallback):
                 url = default_minio_client.get_presigned_url('audio-text', fallback, expiry_hours=2)
                 if url:
                     files['text'] = {'url': url, 'label': f'{record.user_name}_{record.company_name}.txt'}
 
         # 音频原始文本：优先使用 DB 路径，回退到模板路径
         if record.audio_text_origin_path:
-            if default_minio_client.stat_object('audio-text-origin', record.audio_text_origin_path):
+            if default_minio_client.object_exists('audio-text-origin', record.audio_text_origin_path):
                 url = default_minio_client.get_presigned_url('audio-text-origin', record.audio_text_origin_path, expiry_hours=2)
                 if url:
                     files['text_origin'] = {'url': url, 'label': os.path.basename(record.audio_text_origin_path)}
         elif record.user_name and record.company_name:
             fallback = f"{record.user_name}/{record.user_name}_{record.company_name}_origin.txt"
-            if default_minio_client.stat_object('audio-text-origin', fallback):
+            if default_minio_client.object_exists('audio-text-origin', fallback):
                 url = default_minio_client.get_presigned_url('audio-text-origin', fallback, expiry_hours=2)
                 if url:
                     files['text_origin'] = {'url': url, 'label': f'{record.user_name}_{record.company_name}_origin.txt'}
 
         # 面试报告：优先使用 DB 路径，回退到模板路径
         if record.report_file_path:
-            if default_minio_client.stat_object('interview-report', record.report_file_path):
+            if default_minio_client.object_exists('interview-report', record.report_file_path):
                 url = default_minio_client.get_presigned_url('interview-report', record.report_file_path, expiry_hours=2)
                 if url:
                     files['report'] = {'url': url, 'label': os.path.basename(record.report_file_path)}
         elif record.user_name and record.company_name:
             fallback = f"{record.user_name}/{record.user_name}_{record.company_name}.docx"
-            if default_minio_client.stat_object('interview-report', fallback):
+            if default_minio_client.object_exists('interview-report', fallback):
                 url = default_minio_client.get_presigned_url('interview-report', fallback, expiry_hours=2)
                 if url:
                     files['report'] = {'url': url, 'label': f'{record.user_name}_{record.company_name}.docx'}
 
         # 简历：直接使用 DB 中存储的路径
         if record.resume_file_path:
-            if default_minio_client.stat_object('resumes', record.resume_file_path):
+            if default_minio_client.object_exists('resumes', record.resume_file_path):
                 url = default_minio_client.get_presigned_url('resumes', record.resume_file_path, expiry_hours=2)
                 if url:
                     files['resume'] = {'url': url, 'label': os.path.basename(record.resume_file_path)}

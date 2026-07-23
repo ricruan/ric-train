@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { submitAnalysis } from '@/api/analysis';
-import { useFileUpload } from '@interview/shared';
+import { useFileUpload, frontendLogger, pingBackend } from '@interview/shared';
 import { FileUploadProgress } from '@interview/shared';
 
 const IconUpload = () => (
@@ -53,7 +53,23 @@ export default function InterviewAnalysis() {
       return;
     }
 
+    // 1. 先检查后端是否可达
+    frontendLogger.info('开始提交前检查后端连通性');
+    const ping = await pingBackend();
+    if (!ping.ok) {
+      frontendLogger.error(`后端连通性检查失败: ${ping.message}`);
+      setResult({
+        message: `⚠️ ${ping.message}。请确认后端已启动，且 Vite 代理端口配置正确（当前代理到 localhost:8001）`,
+        type: 'error',
+      });
+      submittingRef.current = false;
+      setLoading(false);
+      return;
+    }
+    frontendLogger.info('后端连通性检查通过');
+
     try {
+      frontendLogger.info(`开始提交分析请求: 音频=${audioFile.name}(${audioFile.size}字节), 简历=${resumeFile.name}`);
       // 使用新的 upload 方法
       await upload(
         audioFile,
@@ -68,8 +84,28 @@ export default function InterviewAnalysis() {
           return submitAnalysis(formData, onProgress);
         }
       );
-    } catch {
-      setResult({ message: '网络错误，请检查网络连接后重试', type: 'error' });
+      frontendLogger.info('分析请求提交成功');
+    } catch (err: unknown) {
+      // 给出明确的错误信息
+      const error = err as { code?: string; message?: string; response?: { status?: number; data?: unknown } };
+      let msg = '提交失败';
+      if (error.code === 'ERR_CONNECTION_RESET') {
+        msg = '❌ 连接被重置：后端可能已崩溃，或 Vite 代理端口配置错误（请检查 vite.config.ts 中的 target 端口）';
+      } else if (error.code === 'ERR_CONNECTION_REFUSED' || error.code === 'ECONNREFUSED') {
+        msg = '❌ 连接被拒绝：后端服务未启动，请先启动后端进程';
+      } else if (error.code === 'ECONNABORTED') {
+        msg = '❌ 请求超时：后端处理时间过长，请检查后端日志';
+      } else if (error.code === 'ERR_NETWORK') {
+        msg = '❌ 网络错误：无法连接到后端，请检查后端是否运行中';
+      } else if (error.response?.status === 413) {
+        msg = '❌ 文件过大：上传的音频或简历文件超出服务器限制';
+      } else if (error.response?.status === 500) {
+        msg = '❌ 后端内部错误：请查看后端终端日志了解详情';
+      } else if (error.message) {
+        msg = `❌ ${error.message}`;
+      }
+      frontendLogger.error(`提交分析请求失败: ${msg}`, err);
+      setResult({ message: msg, type: 'error' });
     } finally {
       submittingRef.current = false;
       setLoading(false);

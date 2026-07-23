@@ -127,10 +127,10 @@ def extract_pdf_text(pdf_path: str, **kwargs) -> Optional[str]:
 def get_pdf_info(pdf_path: str) -> Optional[Dict[str, Any]]:
     """
     便捷函数：获取 PDF 文件信息
-    
+
     Args:
         pdf_path: PDF 文件路径
-    
+
     Returns:
         PDF 信息字典，失败返回 None
     """
@@ -140,6 +140,45 @@ def get_pdf_info(pdf_path: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"获取 PDF 信息失败: {e}")
         return None
+
+
+def extract_resume_text(file_path: str) -> str:
+    """
+    从简历文件提取文本内容，支持 PDF 和 DOCX 格式
+
+    Args:
+        file_path: 简历文件路径
+
+    Returns:
+        提取的文本内容
+
+    Raises:
+        ValueError: 不支持的文件格式
+        FileNotFoundError: 文件不存在
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"简历文件不存在: {file_path}")
+
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext == '.pdf':
+        return extract_pdf_text(file_path) or ''
+    elif ext in ('.docx', '.doc'):
+        try:
+            from docx import Document
+            doc = Document(file_path)
+            paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+            # 同时提取表格内容（简历中常见）
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = ' | '.join(cell.text.strip() for cell in row.cells if cell.text.strip())
+                    if row_text:
+                        paragraphs.append(row_text)
+            return '\n'.join(paragraphs)
+        except Exception as e:
+            logger.error(f"提取 DOCX 文本失败: {e}")
+            raise
+    else:
+        raise ValueError(f"不支持的简历格式: {ext}，仅支持 PDF/DOCX/DOC")
 
 
 # =============================

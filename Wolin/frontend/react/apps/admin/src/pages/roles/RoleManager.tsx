@@ -2,9 +2,15 @@ import { useState, useEffect } from 'react';
 import { getRoles, createRole, updateRolePermissions, getPermissions, type Role } from '../../api/roles';
 import { Toast } from '@interview/shared';
 
+interface Permission {
+  key: string;
+  label: string;
+  group: string;
+}
+
 export default function RoleManager() {
   const [roles, setRoles] = useState<Role[]>([]);
-  const [permissions, setPermissions] = useState<string[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
@@ -200,28 +206,28 @@ export default function RoleManager() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '12px', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                   {permissions.map((perm) => (
                     <label
-                      key={perm}
+                      key={perm.key}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '6px',
                         padding: '6px 12px',
-                        background: formData.permissions.includes(perm) ? 'rgba(0, 212, 255, 0.12)' : 'rgba(255, 255, 255, 0.04)',
-                        border: `1px solid ${formData.permissions.includes(perm) ? 'rgba(0, 212, 255, 0.3)' : 'var(--border-color)'}`,
+                        background: formData.permissions.includes(perm.key) ? 'rgba(0, 212, 255, 0.12)' : 'rgba(255, 255, 255, 0.04)',
+                        border: `1px solid ${formData.permissions.includes(perm.key) ? 'rgba(0, 212, 255, 0.3)' : 'var(--border-color)'}`,
                         borderRadius: 'var(--radius-sm)',
                         cursor: 'pointer',
                         fontSize: '13px',
-                        color: formData.permissions.includes(perm) ? 'var(--accent-cyan)' : 'var(--text-secondary)',
+                        color: formData.permissions.includes(perm.key) ? 'var(--accent-cyan)' : 'var(--text-secondary)',
                         transition: 'all var(--transition-fast)',
                       }}
                     >
                       <input
                         type="checkbox"
-                        checked={formData.permissions.includes(perm)}
-                        onChange={() => togglePermission(perm)}
+                        checked={formData.permissions.includes(perm.key)}
+                        onChange={() => togglePermission(perm.key)}
                         style={{ margin: 0 }}
                       />
-                      {perm}
+                      {perm.label}
                     </label>
                   ))}
                 </div>

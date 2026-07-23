@@ -91,7 +91,7 @@ class MinioClient(metaclass=SingletonMeta):
         """
         获取唯一的对象名，若已存在则添加 (1)、(2) 等后缀（类似 Windows 重命名规则）
         """
-        if not self.stat_object(bucket_name, object_name):
+        if not self.object_exists(bucket_name, object_name):
             return object_name
 
         # 拆分文件名和扩展名
@@ -99,7 +99,7 @@ class MinioClient(metaclass=SingletonMeta):
         counter = 1
         while True:
             new_name = f"{name}({counter}){ext}"
-            if not self.stat_object(bucket_name, new_name):
+            if not self.object_exists(bucket_name, new_name):
                 return new_name
             counter += 1
 
@@ -197,6 +197,14 @@ class MinioClient(metaclass=SingletonMeta):
         except S3Error as e:
             logger.error(f"[!] 获取对象信息失败: {e}")
             return None
+
+    def object_exists(self, bucket_name: str, object_name: str) -> bool:
+        """检查对象是否存在（静默检查，不存在时不记录错误日志）"""
+        try:
+            self.client.stat_object(bucket_name, object_name)
+            return True
+        except S3Error:
+            return False
 
     def str_list_2_minio(self, str_list: list[str] | str, bucket_name: str, object_name: str) -> str | None:
         """

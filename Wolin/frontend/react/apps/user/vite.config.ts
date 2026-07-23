@@ -13,12 +13,14 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/interview': {
-        target: 'http://localhost:8002',
+        target: 'http://localhost:8001',
         changeOrigin: true,
+        timeout: 10 * 60 * 1000,
       },
       '/api': {
-        target: 'http://localhost:8002',
+        target: 'http://localhost:8001',
         changeOrigin: true,
+        timeout: 10 * 60 * 1000,
       },
     },
   },

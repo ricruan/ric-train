@@ -36,7 +36,7 @@ class InterviewAnalysisService:
             if audio_file:
                 minio_client.upload_file_async(bucket_name='audios',
                                                object_name=user_name + '/' + Path(audio_file).name,
-                                               file_path=resume_file)
+                                               file_path=audio_file)
         except Exception as e:
             logger.error(f"Interview Analysis MinIO保存origin file 时发生异常 \n {e}",stack_info=True)
 

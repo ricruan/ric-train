@@ -68,6 +68,16 @@ export default function Login() {
             {loading ? '登录中...' : '登 录'}
           </button>
         </form>
+        <div className="login-footer">
+          <a
+            href="http://localhost:3000/"
+            className="switch-system-link"
+            target="_self"
+          >
+            <span className="link-icon">📊</span>
+            前往面试分析界面
+          </a>
+        </div>
       </div>
     </div>
   );

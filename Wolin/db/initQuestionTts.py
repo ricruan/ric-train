@@ -30,7 +30,7 @@ def init_question_tts(voice: str = "中文女",questions: list[str] = common_que
         object_name = service._build_object_name(voice, question)
 
         # 检查 MinIO 是否已有缓存
-        if service._minio_client.stat_object(service.bucket_name, object_name):
+        if service._minio_client.object_exists(service.bucket_name, object_name):
             hit += 1
             logger.info(f"[{idx}/{total}] 缓存已存在，跳过: {question[:20]}...")
             continue
