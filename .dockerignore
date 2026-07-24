@@ -61,6 +61,9 @@ docker-compose*
 README.md
 *.md
 
+# 所有以 . 开头的文件夹（统一忽略）
+.*/
+
 # Logs
 logs
 *.log
