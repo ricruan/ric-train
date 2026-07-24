@@ -1,6 +1,7 @@
 import logging
+from abc import ABC
 from typing import Optional, Dict, Any, List, Type, TypeVar, ClassVar, Literal
-from abc import ABC, abstractproperty
+
 from pydantic import BaseModel, Field, ConfigDict
 
 from Base.Repository.base.baseConnection import BaseConnection
@@ -284,7 +285,7 @@ class BaseDBModel(BaseModel, ABC):
     @classmethod
     def _ensure_table_exists(cls) -> None:
         """
-        确保表存在，不存在则自动创建
+        确保表存在，不存在则自动创建；同时自动补齐缺失的列
         使用缓存机制避免重复检查
         """
         # 如果已经检查过，直接返回
@@ -292,15 +293,138 @@ class BaseDBModel(BaseModel, ABC):
             return
 
         # 检查表是否存在
+        table_just_created = False
         try:
             if not cls.table_exists():
                 logger.info(f"表 {cls.get_table_name()} 不存在，开始创建...")
                 cls.create_table()
+                table_just_created = True
         except Exception as e:
             logger.warning(f"检查或创建表 {cls.get_table_name()} 失败：{str(e)}")
 
+        # 新创建的表不需要检查列（建表 SQL 已包含所有列）
+        if not table_just_created:
+            cls._ensure_columns_exist()
+
         # 标记为已检查
         cls._table_checked = True
+
+    @classmethod
+    def _get_db_columns(cls) -> set:
+        """获取数据库中表的现有列名集合"""
+        db = cls.get_db_connection()
+        if db is None:
+            return set()
+
+        table_name = cls.get_table_name()
+        db_type = db.config.get("type", "mysql").lower()
+
+        try:
+            if db_type == "sqlite":
+                sql = f"PRAGMA table_info(`{table_name}`)"
+                result = db.execute(sql)
+                return {row['name'] for row in result} if result else set()
+            elif db_type == "postgresql":
+                sql = """
+                    SELECT column_name
+                    FROM information_schema.columns
+                    WHERE table_schema = 'public' AND table_name = %s
+                """
+                result = db.execute(sql, (table_name,))
+            else:
+                # MySQL
+                database = db.config.get("database")
+                sql = """
+                    SELECT COLUMN_NAME
+                    FROM information_schema.COLUMNS
+                    WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s
+                """
+                result = db.execute(sql, (database, table_name))
+
+            return {row[list(row.keys())[0]] for row in result} if result else set()
+        except Exception as e:
+            logger.warning(f"获取表 {table_name} 列信息失败：{str(e)}")
+            return set()
+
+    @classmethod
+    def _parse_column_defs_from_sql(cls) -> dict:
+        """
+        从 create_table_sql 中解析列定义。
+        返回 {列名: 列定义} 的字典，如 {'audio_text_origin_path': 'VARCHAR(500) COMMENT ...'}
+        """
+        if not cls.create_table_sql:
+            return {}
+
+        import re
+        defs = {}
+        # 逐行解析，只匹配以反引号列名开头的行（排除 KEY/INDEX/PRIMARY/UNIQUE 等约束行）
+        for line in cls.create_table_sql.splitlines():
+            stripped = line.strip()
+            # 跳过空行、注释行
+            if not stripped or stripped.startswith('--') or stripped.startswith('/*'):
+                continue
+            # 跳过约束/索引行（PRIMARY KEY, UNIQUE KEY, KEY, INDEX, CONSTRAINT, CHECK）
+            upper_stripped = stripped.upper()
+            if any(upper_stripped.startswith(kw) for kw in
+                   ('PRIMARY', 'UNIQUE', 'KEY', 'INDEX', 'CONSTRAINT', 'CHECK',
+                    'CREATE', 'ENGINE', ')')):
+                continue
+            # 匹配 `column_name` definition ...
+            match = re.match(r'`(\w+)`\s+(.+)', stripped)
+            if match:
+                col_name = match.group(1)
+                col_def = match.group(2).rstrip(',').strip()
+                defs[col_name] = col_def
+        return defs
+
+    @classmethod
+    def _ensure_columns_exist(cls) -> None:
+        """
+        检查模型中定义的字段是否在数据库表中都存在，缺失的自动 ALTER TABLE 添加。
+        仅处理模型字段（model_fields），跳过非 DB 列。
+        """
+        if not cls.create_table_sql:
+            return
+
+        db = cls.get_db_connection()
+        if db is None:
+            return
+
+        existing_cols = cls._get_db_columns()
+        if not existing_cols:
+            return
+
+        # 从建表 SQL 中解析列定义
+        col_defs = cls._parse_column_defs_from_sql()
+
+        # 获取模型字段名
+        model_fields = set(cls.model_fields.keys())
+
+        # 找出模型中有定义但数据库中不存在的列
+        missing_cols = model_fields - existing_cols
+        # 排除 id（通常已有）和 ClassVar 等非 DB 字段
+        missing_cols.discard('id')
+
+        if not missing_cols:
+            return
+
+        table_name = cls.get_table_name_with_db()
+
+        for col_name in missing_cols:
+            if col_name not in col_defs:
+                logger.warning(
+                    f"表 {cls.get_table_name()} 缺少列 `{col_name}`，"
+                    f"但未在建表 SQL 中找到定义，跳过自动添加"
+                )
+                continue
+
+            col_def = col_defs[col_name]
+            alter_sql = f"ALTER TABLE {table_name} ADD COLUMN `{col_name}` {col_def}"
+            try:
+                db.execute(alter_sql, commit=True)
+                logger.info(f"表 {cls.get_table_name()} 自动添加缺失列：`{col_name}`")
+            except Exception as e:
+                logger.warning(f"添加缺失列 `{col_name}` 失败：{str(e)}")
 
     @classmethod
     def get_by_id(cls: Type[T], id_val: int) -> Optional[T]:
@@ -533,7 +657,10 @@ class BaseDBModel(BaseModel, ABC):
             sql = f"UPDATE {table_name} SET {sets} WHERE id = %s"
 
             affected = db.execute(sql, tuple(data.values()) + (self.id,))
-            return affected > 0
+            if affected is None or affected < 0:
+                logger.warning(f"{self.__class__.__name__}._update() 执行异常，affected={affected}, id={self.id}")
+                return False
+            return True
         except Exception as e:
             logger.error(f"{self.__class__.__name__}._update() 失败：{str(e)}")
             return False

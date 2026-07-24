@@ -1,13 +1,11 @@
 import logging
 from typing import Optional, List, Dict, Any
 
-from neo4j import GraphDatabase, Session
+from neo4j import GraphDatabase
 from neo4j.exceptions import Neo4jError
 
-from Base.Config.logConfig import setup_logging
 from Base.Config.setting import settings
 
-setup_logging()
 logger = logging.getLogger(__name__)
 
 

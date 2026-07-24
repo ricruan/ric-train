@@ -57,10 +57,38 @@ def merge_report(left: Optional[Report], right: Optional[Any]) -> Optional[Repor
     return left.model_copy(update=right_dict)
 
 
+def merge_asr_info(left: Optional[ASRInfo], right: Optional[Any]) -> Optional[ASRInfo]:
+    if right is None:
+        return left
+    if left is None:
+        return ASRInfo(**right) if isinstance(right, dict) else right
+
+    if isinstance(right, dict):
+        right_dict = right
+    else:
+        right_dict = right.model_dump(exclude_unset=True, exclude_none=True)
+
+    return left.model_copy(update=right_dict)
+
+
+def merge_resume_info(left: Optional[ResumeInfo], right: Optional[Any]) -> Optional[ResumeInfo]:
+    if right is None:
+        return left
+    if left is None:
+        return ResumeInfo(**right) if isinstance(right, dict) else right
+
+    if isinstance(right, dict):
+        right_dict = right
+    else:
+        right_dict = right.model_dump(exclude_unset=True, exclude_none=True)
+
+    return left.model_copy(update=right_dict)
+
+
 class IAState(BaseState):
     report: Annotated[Report, merge_report] = Field(default_factory=Report, description='报告')
-    asr_info: ASRInfo = Field(default_factory=ASRInfo, description='asr 信息')
-    resume_info: ResumeInfo = Field(default_factory=ResumeInfo, description='简历信息')
+    asr_info: Annotated[ASRInfo, merge_asr_info] = Field(default_factory=ASRInfo, description='asr 信息')
+    resume_info: Annotated[ResumeInfo, merge_resume_info] = Field(default_factory=ResumeInfo, description='简历信息')
     api_params: ApiParams = Field(default_factory=ApiParams, description='api 参数')
 
     # 持久化相关字段

@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 import uuid
-from datetime import datetime
 
 from Base import default_qwen_llm
 from Base.Ai.base import SystemMessages, UserMessages
@@ -14,6 +13,7 @@ from Base.RicUtils.pdfUtils import extract_resume_text
 from Base.RicUtils.redisUtils import cache_with_params
 from Base.Service.asrService import audio_file_2_text_with_cache
 from Wolin.ai.interview.iaState import IAState, ResumeInfo
+from Wolin.ai.interview.nodes.iaDecorator import capture_node_error
 from Wolin.prompt.insertviewPrompt import ANALYSIS_START_PROMPT, RESUME_JSON_EXTRACT_PROMPT, COMBINE_SLICE_PROMPT, \
     render, REPORT_PROMPT, CORE_QA_EXTRACT_PROMPT, test, CORE_QA_ANALYSIS_PROMPT, RESUME_ANALYSIS_PROMPT, \
     INTERVIEW_EVALUATION_PROMPT, SELF_EVALUATION_PROMPT, ANALYSIS_END_PROMPT, COMBINE_SLICE_PROMPT_V2
@@ -21,7 +21,6 @@ from Wolin.service import get_email_service
 from Wolin.service.interviewRecordService import get_interview_record_service
 from WorkFlow import BaseWorkFlow, load_node
 from WorkFlow.base.decorators import graph_node
-from Wolin.ai.interview.nodes.iaDecorator import capture_node_error
 
 logger = logging.getLogger(__name__)
 
@@ -358,11 +357,12 @@ if __name__ == '__main__':
 
 
     def test_full_process():
+        logging.basicConfig(level=logging.INFO)
         load_node(sys.modules[__name__])
         _state = IAState()
         _state.ric_id = '1111'
-        _state.resume_info.resume_path = r'C:\Users\11243\Desktop\黄简历.pdf'
-        _state.asr_info.audio_path = r'C:\Users\11243\Desktop\黄立强南方电网.m4a'
+        _state.resume_info.resume_path = r'C:\Users\11243\Desktop\pdfs\程鑫 _ 个人简历.pdf'
+        _state.asr_info.audio_path = r'C:\Users\11243\Desktop\audio\黄立强南方电网.m4a'
         _state.api_params.user_name = '黄立强'
         _state.api_params.receive_email = '2366692214@qq.com'
         _state.api_params.company_name = '南方电网'

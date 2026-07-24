@@ -1,8 +1,7 @@
-from abc import ABC, abstractmethod
-from typing import Optional, List, Dict, Any, Union
-from contextlib import contextmanager
 import logging
-from urllib.parse import quote_plus
+from abc import ABC, abstractmethod
+from contextlib import contextmanager
+from typing import Optional, List, Dict, Any, Union
 
 from pymysql.err import OperationalError
 
@@ -213,6 +212,17 @@ class BaseConnection(ABC):
                 logger.debug(f"表已存在，跳过创建表：{oe}")
                 # 表已存在  忽略
                 return 0
+            # 非 1050 的 OperationalError 需要正确处理，不能吞掉异常后隐式返回 None
+            logger.warning(f"SQL 执行 OperationalError，标记连接为不可用：{oe}")
+            self._is_available = False
+            logger.debug(f"失败 SQL: {sql}")
+            logger.debug(f"参数: {params}")
+            if operation_type == OperationType.QUERY:
+                return []
+            elif operation_type == OperationType.INSERT:
+                return -1
+            else:  # UPDATE, DELETE, EXECUTE
+                return -1
         except Exception as e:
             logger.warning(f"SQL 执行失败，标记连接为不可用：{e}")
             self._is_available = False

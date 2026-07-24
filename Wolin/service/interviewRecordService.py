@@ -109,7 +109,8 @@ class InterviewRecordService:
                     update_data['audio_text_path'] = state.audio_text_path
                 if getattr(state, 'audio_text_origin_path', None):
                     update_data['audio_text_origin_path'] = state.audio_text_origin_path
-                if state.asr_info.qa_pairs:
+                # qa_pairs 可能是空列表（无技术问答），空列表也是有效数据，用 is not None 判断
+                if state.asr_info.qa_pairs is not None:
                     update_data['qa_pairs'] = json.dumps(state.asr_info.qa_pairs, ensure_ascii=False)
 
             # 3. 更新简历信息
@@ -125,9 +126,11 @@ class InterviewRecordService:
             if state.report:
                 if state.report.analysis_start:
                     update_data['analysis_start'] = state.report.analysis_start
-                if state.report.interview_json:
+                # interview_json 可能是空 dict，用 is not None 判断
+                if state.report.interview_json is not None:
                     update_data['interview_json'] = json.dumps(state.report.interview_json, ensure_ascii=False)
-                if state.report.qa_analysis:
+                # qa_analysis 可能是空列表/dict，用 is not None 判断
+                if state.report.qa_analysis is not None:
                     update_data['qa_analysis'] = json.dumps(state.report.qa_analysis, ensure_ascii=False)
                 if state.report.resume_analysis:
                     update_data['resume_analysis'] = state.report.resume_analysis
@@ -287,7 +290,7 @@ if __name__ == '__main__':
 
     state.report.analysis_start = '面试报告开篇语...'
     state.report.interview_json = {'score': 85, 'level': 'A', 'items': [{'name': '技术能力', 'score': 90}]}
-    state.report.qa_analysis = {'total_questions': 10, 'good_answers': 7, 'suggestions': ['加强沟通']}
+    state.report.qa_analysis = ''
     state.report.resume_analysis = '简历分析内容...'
     state.report.interview_evaluation = '面试官评价：表现良好'
     state.report.self_evaluation = '自我评价：有待提高'

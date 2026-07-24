@@ -6,9 +6,6 @@ import threading
 from typing import Optional, List, Generator
 from dotenv import load_dotenv
 
-from Base.Config.logConfig import setup_logging
-
-setup_logging()
 logger = logging.getLogger(__name__)
 load_dotenv()
 
