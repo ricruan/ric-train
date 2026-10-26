@@ -257,7 +257,7 @@ router = APIRouter()
 
 
 @router.post("/chat-v1")
-@persist_conversation(auto_save_vdb=True,is_auditing=False)
+@persist_conversation(auto_save_vdb=True,is_auditing=True)
 def chat(params: ChatParams):
     """
     对话接口

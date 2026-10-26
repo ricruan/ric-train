@@ -17,6 +17,7 @@ def register_keyword_into_jieba():
         res = BaseKeywordModel.get_all_active()
         for i in res:
             jieba_client.add_word(i.keyword_name)
+            logger.debug(f"已向jieba词典中加入关键字{i.keyword_name}")
     except Exception as e:
         logger.error(f"关键词注册到jieba中 失败：{str(e)}")
 
