@@ -1,9 +1,11 @@
+from Base.Config.logConfig import setup_logging
+
+# 业务模块导入会触发关键词注册等初始化，必须先配置日志。
+setup_logging()
+
 from Base.Api.ai.chatApi import register_ai_chat_router
 from Base.Api.authApi import register_auth_router
-from Base.Config.logConfig import setup_logging
 from Base.Service.scheduler.auto_register import auto_register_all_scheduler
-
-setup_logging()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
